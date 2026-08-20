@@ -5,6 +5,7 @@ import { Icon } from '@/components/ui/Icon'
 import { PageHeader, usePageMeta } from '@/components/common/PageShell'
 import { useAccount, request } from '@/context/AccountContext'
 import { useSettings } from '@/context/SettingsContext'
+import { MyReviews } from '@/components/review/MyReviews'
 import { DISTRICTS } from '@/data/content'
 import { cx, formatDate, isValidBdPhone, taka } from '@/utils/format'
 
@@ -229,6 +230,7 @@ export default function Account() {
         <div className="mt-8 flex flex-wrap gap-2">
           {[
             { id: 'orders', label: 'My orders' },
+            { id: 'reviews', label: 'My reviews' },
             { id: 'addresses', label: 'Saved addresses' },
             { id: 'profile', label: 'Profile' },
           ].map((x) => (
@@ -340,6 +342,13 @@ export default function Account() {
         )}
 
         {/* ----------------------------- addresses ---------------------------- */}
+        {/* ------------------------------ reviews ----------------------------- */}
+        {tab === 'reviews' && (
+          <div className="mx-auto max-w-3xl">
+            <MyReviews />
+          </div>
+        )}
+
         {tab === 'addresses' && (
           <div className="mx-auto max-w-2xl space-y-4">
             {customer.addresses.length === 0 && !showForm && (

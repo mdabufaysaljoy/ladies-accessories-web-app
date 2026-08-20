@@ -25,6 +25,7 @@ import mediaRoutes from './routes/media.js'
 import reviewRoutes from './routes/reviews.js'
 import courierRoutes from './routes/couriers.js'
 import accountRoutes from './routes/account.js'
+import trackingRoutes from './routes/tracking.js'
 import { startCourierPoller } from './services/courierPoller.js'
 
 const app = express()
@@ -99,6 +100,7 @@ app.use('/api/media', mediaRoutes)
 app.use('/api/reviews', reviewRoutes)
 app.use('/api/couriers', courierRoutes)
 app.use('/api/account', accountRoutes)
+app.use('/api/track', trackingRoutes)
 
 app.use(notFound)
 app.use(errorHandler)

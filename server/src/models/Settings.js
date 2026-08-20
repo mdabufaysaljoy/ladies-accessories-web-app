@@ -221,10 +221,34 @@ const settingsSchema = new mongoose.Schema(
         apiKey: secretField,
         senderId: { type: String, default: '' },
       },
+      /**
+       * Marketing tracking. The IDs here are public by nature — they end up in
+       * the page source of any site that runs a pixel — so they are the one
+       * part of `integrations` the storefront is allowed to read. The CAPI
+       * access token is a real credential and stays encrypted, server-side only.
+       */
       analytics: {
+        // --- Meta / Facebook ---
         facebookPixelId: { type: String, default: '' },
+        /** Server-side Conversions API. Survives ad blockers and iOS ITP. */
+        facebookCapiEnabled: { type: Boolean, default: false },
+        facebookAccessToken: secretField,
+        /** Set while testing so events land in Events Manager → Test events. */
+        facebookTestEventCode: { type: String, default: '' },
+        /** <meta name="facebook-domain-verification"> content value. */
+        facebookDomainVerification: { type: String, default: '' },
+
+        // --- Google ---
         googleAnalyticsId: { type: String, default: '' },
         googleTagManagerId: { type: String, default: '' },
+        /** Google Ads conversion tag, e.g. AW-123456789 */
+        googleAdsConversionId: { type: String, default: '' },
+        /** Conversion label for the Purchase action. */
+        googleAdsPurchaseLabel: { type: String, default: '' },
+        googleSiteVerification: { type: String, default: '' },
+
+        /** Logs every event the server forwards. Leave off in production. */
+        debug: { type: Boolean, default: false },
       },
     },
 
@@ -338,10 +362,29 @@ settingsSchema.methods.toClientJSON = function ({ includeAdminFields = false } =
   scrub(obj.couriers?.redx, ['accessToken'])
   scrub(obj.integrations?.email, ['smtpPassword'])
   scrub(obj.integrations?.sms, ['apiKey'])
+  scrub(obj.integrations?.analytics, ['facebookAccessToken'])
 
   if (!includeAdminFields) {
-    // Public storefront gets no integration or courier config at all.
+    /**
+     * Public storefront gets no integration config — except the tracking IDs,
+     * which have to reach the browser to fire a pixel at all. The token was
+     * already scrubbed above; this whitelist makes sure nothing else leaks in
+     * when new analytics fields are added later.
+     */
+    const a = obj.integrations?.analytics ?? {}
+    const publicAnalytics = {
+      facebookPixelId: a.facebookPixelId ?? '',
+      facebookDomainVerification: a.facebookDomainVerification ?? '',
+      googleAnalyticsId: a.googleAnalyticsId ?? '',
+      googleTagManagerId: a.googleTagManagerId ?? '',
+      googleAdsConversionId: a.googleAdsConversionId ?? '',
+      googleAdsPurchaseLabel: a.googleAdsPurchaseLabel ?? '',
+      googleSiteVerification: a.googleSiteVerification ?? '',
+      // Tells the client whether to bother posting events to /api/track.
+      serverSideEnabled: Boolean(a.facebookCapiEnabled && a.facebookPixelId),
+    }
     delete obj.integrations
+    obj.analytics = publicAnalytics
     delete obj.couriers
     delete obj.notifications
     delete obj.invoice

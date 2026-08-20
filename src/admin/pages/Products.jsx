@@ -7,6 +7,7 @@ import {
 } from '../components/ui'
 import { Icon } from '@/components/ui/Icon'
 import { ProductArt } from '@/components/product/ProductArt'
+import { ImportProducts } from '../components/ImportProducts'
 import { taka } from '@/utils/format'
 
 export default function Products() {
@@ -18,6 +19,7 @@ export default function Products() {
   const [page, setPage] = useState(1)
   const [selected, setSelected] = useState([])
   const [confirm, setConfirm] = useState(null)
+  const [importOpen, setImportOpen] = useState(false)
   const { push, node } = useToasts()
 
   const category = params.get('category') ?? ''
@@ -82,9 +84,14 @@ export default function Products() {
       title="Products"
       subtitle={data ? `${data.meta.total} products` : 'Loading…'}
       actions={
-        <Btn as={Link} to="/admin/products/new" variant="primary" size="md">
-          <Icon name="plus" size={15} /> Add product
-        </Btn>
+        <div className="flex flex-wrap gap-2">
+          <Btn variant="ghost" size="md" onClick={() => setImportOpen(true)}>
+            <Icon name="grid" size={15} /> Bulk import
+          </Btn>
+          <Btn as={Link} to="/admin/products/new" variant="primary" size="md">
+            <Icon name="plus" size={15} /> Add product
+          </Btn>
+        </div>
       }
     >
       {node}
@@ -221,6 +228,12 @@ export default function Products() {
           </>
         )}
       </Card>
+
+      <ImportProducts
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImported={load}
+      />
 
       <ConfirmDialog
         open={Boolean(confirm)}

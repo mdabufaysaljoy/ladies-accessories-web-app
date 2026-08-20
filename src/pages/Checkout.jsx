@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Icon } from '@/components/ui/Icon'
@@ -9,6 +9,7 @@ import { DISTRICTS } from '@/data/content'
 import { useSettings } from '@/context/SettingsContext'
 import { useAccount } from '@/context/AccountContext'
 import { api, customerApi } from '@/lib/api'
+import { getPixelIds, trackBeginCheckout } from '@/lib/tracking'
 
 import { useStore } from '@/context/StoreContext'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
@@ -225,6 +226,19 @@ export default function Checkout() {
 
   usePageMeta('Checkout')
 
+  /**
+   * InitiateCheckout, once per visit to this page. `lines` is deliberately not
+   * a dependency — editing quantities here should not re-fire the event and
+   * inflate the funnel.
+   */
+  const checkoutTracked = useRef(false)
+  useEffect(() => {
+    if (checkoutTracked.current || lines.length === 0) return
+    checkoutTracked.current = true
+    trackBeginCheckout(lines, totals.total)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lines.length])
+
   const set = (key) => (e) => {
     const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value
     setForm((f) => ({ ...f, [key]: value }))
@@ -348,6 +362,13 @@ export default function Checkout() {
         payment: { method, transactionId: trxId.trim() },
         source: 'web',
         saveAddress: isSignedIn && saveAddress,
+        /**
+         * Meta's browser cookies, handed over explicitly. They are first-party
+         * to the storefront, so on the split-domain deploy the API host never
+         * sees them — without this the server-side Purchase has almost nothing
+         * to match a shopper on.
+         */
+        tracking: { ...getPixelIds(), sourceUrl: window.location.href },
       })
 
       // Redirect-based gateways hand off to the provider; everything else is done.

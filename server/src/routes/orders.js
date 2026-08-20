@@ -9,6 +9,7 @@ import { requireAuth, requireAbility } from '../middleware/auth.js'
 import { ApiError, asyncHandler, paginate, meta, isValidBdPhone, normalizeBdPhone } from '../utils/helpers.js'
 import { logActivity } from '../models/ActivityLog.js'
 import { sendOrderEmail, sendOrderPlacedEmail, sendNewOrderAdminEmail } from '../services/mailer.js'
+import { trackPurchase } from '../services/pixel.js'
 import { ensureInvoice, renderInvoiceHtml } from '../services/invoice.js'
 import * as couriers from '../services/couriers/index.js'
 import { optionalCustomer } from '../middleware/customerAuth.js'
@@ -120,7 +121,7 @@ router.post(
   '/',
   optionalCustomer,
   asyncHandler(async (req, res) => {
-    const { customer = {}, lines = [], zoneId, couponCode, payment = {}, source = 'web', saveAddress } = req.body ?? {}
+    const { customer = {}, lines = [], zoneId, couponCode, payment = {}, source = 'web', saveAddress, tracking = {} } = req.body ?? {}
 
     if (!Array.isArray(lines) || lines.length === 0) throw ApiError.badRequest('Your bag is empty')
     if (!customer.name || String(customer.name).trim().length < 3)
@@ -159,6 +160,19 @@ router.post(
 
     const order = await Order.create({
       account: req.customer?._id,
+      /**
+       * Meta pixel cookies, captured client-side. `_fbp`/`_fbc` are first-party
+       * to the storefront domain, so on the split api.domain.com deploy this
+       * request never carries them itself — the browser has to hand them over
+       * in the body. IP and user agent come from the request, not the client.
+       */
+      tracking: {
+        fbp: String(tracking.fbp ?? '').slice(0, 128),
+        fbc: String(tracking.fbc ?? '').slice(0, 256),
+        sourceUrl: String(tracking.sourceUrl ?? req.headers.origin ?? '').slice(0, 500),
+        userAgent: String(req.get('user-agent') ?? '').slice(0, 500),
+        ip: req.ip ?? '',
+      },
       customer: {
         name: String(customer.name).trim(),
         phone,
@@ -270,6 +284,21 @@ router.post(
         ? sendNewOrderAdminEmail(order, { brand, settings, adminUrl: storefrontUrl })
         : null,
       couriers.tryAutoCreate(order, { by: 'automation' }),
+      // Server-side Purchase. Deduplicated against the browser pixel by
+      // `event_id === orderNumber`, and still counted when the shopper never
+      // reaches the confirmation page or runs an ad blocker.
+      trackPurchase(order, { sourceUrl: storefrontUrl }).then((result) =>
+        Order.updateOne(
+          { _id: order._id },
+          {
+            $set: {
+              'tracking.capi.sent': Boolean(result?.ok && !result?.skipped),
+              'tracking.capi.at': new Date(),
+              'tracking.capi.error': result?.error ?? '',
+            },
+          },
+        ),
+      ),
     ]).catch((error) => console.error('[order] post-placement tasks failed:', error))
   }),
 )

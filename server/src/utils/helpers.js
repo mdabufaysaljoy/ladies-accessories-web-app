@@ -53,3 +53,49 @@ export const normalizeBdPhone = (raw) => {
 
 export const isValidBdPhone = (raw) =>
   /^8801[3-9]\d{8}$/.test(normalizeBdPhone(raw))
+
+/**
+ * Pulls the video id out of any YouTube URL a shop owner is likely to paste:
+ * a watch link, a share link, an embed, a Short, or a bare 11-character id.
+ * Extra query parameters (`?t=`, `&list=`, tracking junk) are discarded.
+ *
+ * Returns null for anything that is not YouTube — the caller treats that as a
+ * validation failure rather than storing a URL that will not embed.
+ */
+export function parseYouTubeId(input) {
+  const raw = String(input ?? '').trim()
+  if (!raw) return null
+
+  // A bare id, pasted straight from the address bar's `v=` value.
+  if (/^[\w-]{11}$/.test(raw)) return raw
+
+  let url
+  try {
+    url = new URL(raw.startsWith('http') ? raw : `https://${raw}`)
+  } catch {
+    return null
+  }
+
+  const host = url.hostname.replace(/^www\./, '').toLowerCase()
+  const isYouTube =
+    host === 'youtube.com' ||
+    host === 'm.youtube.com' ||
+    host === 'music.youtube.com' ||
+    host === 'youtube-nocookie.com' ||
+    host === 'youtu.be'
+  if (!isYouTube) return null
+
+  // youtu.be/<id>
+  if (host === 'youtu.be') {
+    const id = url.pathname.slice(1).split('/')[0]
+    return /^[\w-]{11}$/.test(id) ? id : null
+  }
+
+  // youtube.com/watch?v=<id>
+  const v = url.searchParams.get('v')
+  if (v && /^[\w-]{11}$/.test(v)) return v
+
+  // /embed/<id>, /shorts/<id>, /live/<id>, /v/<id>
+  const match = url.pathname.match(/^\/(embed|shorts|live|v)\/([\w-]{11})/)
+  return match ? match[2] : null
+}

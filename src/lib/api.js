@@ -4,8 +4,12 @@
  */
 const BASE = import.meta.env.VITE_API_URL ?? ''
 
+/** Absolute API root, for callers that cannot go through `request` — e.g. the
+ *  tracking beacon, which must hand `navigator.sendBeacon` a plain URL. */
+export const API_BASE = `${BASE}/api`
+
 const TOKEN_KEY = 'gbs.admin.token'
-const ACCOUNT_TOKEN_KEY = 'gbs.account.token'
+export const ACCOUNT_TOKEN_KEY = 'gbs.account.token'
 
 export const getToken = () => {
   try {

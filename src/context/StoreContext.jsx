@@ -3,6 +3,7 @@ import { useLocalStorage } from '@/hooks/useLocalStorage'
 import { PRODUCTS } from '@/data/products'
 import { useSettings } from '@/context/SettingsContext'
 import { api } from '@/lib/api'
+import { trackAddToCart } from '@/lib/tracking'
 
 const StoreContext = createContext(null)
 
@@ -66,6 +67,12 @@ export function StoreProvider({ children }) {
         toast(`${product.name} added to bag`, { kind: 'success', slug: product.slug })
         setCartOpen(true)
       }
+
+      // Fires for "Buy now" too (silent only suppresses the toast and drawer):
+      // the shopper did put the item in the bag, and Meta expects AddToCart to
+      // precede InitiateCheckout in the funnel.
+      const sizeOption = product.sizes?.find((s) => s.label === size)
+      trackAddToCart(product, qty, product.price + (sizeOption?.priceDelta ?? 0))
     },
     [setLines, toast],
   )

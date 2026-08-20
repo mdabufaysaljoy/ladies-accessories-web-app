@@ -55,6 +55,26 @@ const orderSchema = new mongoose.Schema(
      */
     account: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', index: true },
 
+    /**
+     * Meta pixel identifiers captured in the browser at checkout. They live on
+     * the order because the Conversions API Purchase is sent from the server,
+     * possibly after the shopper's tab is gone — and because `_fbp`/`_fbc` are
+     * first-party cookies on the storefront domain, so the API host never
+     * receives them on its own. Match quality collapses without them.
+     */
+    tracking: {
+      fbp: { type: String, default: '' },
+      fbc: { type: String, default: '' },
+      sourceUrl: { type: String, default: '' },
+      userAgent: { type: String, default: '' },
+      ip: { type: String, default: '' },
+      capi: {
+        sent: { type: Boolean, default: false },
+        at: Date,
+        error: { type: String, default: '' },
+      },
+    },
+
     customer: {
       name: { type: String, required: true },
       phone: { type: String, required: true, index: true },

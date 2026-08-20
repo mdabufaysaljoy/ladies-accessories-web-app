@@ -6,6 +6,7 @@ import { Icon } from '@/components/ui/Icon'
 import { ProductArt } from '@/components/product/ProductArt'
 import { QtyStepper } from '@/components/product/VariantPicker'
 import { customerApi } from '@/lib/api'
+import { getPixelIds } from '@/lib/tracking'
 import { useSettings } from '@/context/SettingsContext'
 import { useStore } from '@/context/StoreContext'
 import { useEscape, useScrollLock } from '@/hooks/useScrollLock'
@@ -67,6 +68,9 @@ export function QuickOrder({ product, open, onClose, color, size, initialQty = 1
         zoneId,
         payment: { method: 'cod' },
         source: 'quick-order',
+        // Same attribution data the full checkout sends — quick orders are a
+        // large share of COD sales and must not lose their ad source.
+        tracking: { ...getPixelIds(), sourceUrl: window.location.href },
       })
       placeOrder(order)
       onClose()

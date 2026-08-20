@@ -141,12 +141,74 @@ export const COUPONS = [
   { code: 'FREESHIP', type: 'shipping', value: 0, min: 1200, label: 'Free delivery over ৳1,200' },
 ]
 
-export const DISTRICTS = [
-  'Dhaka', 'Chattogram', 'Khulna', 'Rajshahi', 'Sylhet', 'Barishal', 'Rangpur', 'Mymensingh',
-  'Gazipur', 'Narayanganj', 'Cumilla', 'Bogura', 'Jashore', 'Cox’s Bazar', 'Dinajpur',
-  'Faridpur', 'Kushtia', 'Noakhali', 'Pabna', 'Tangail', 'Brahmanbaria', 'Feni', 'Jamalpur',
-  'Naogaon', 'Netrokona', 'Nilphamari', 'Patuakhali', 'Rangamati', 'Satkhira', 'Sirajganj',
+/**
+ * All 64 districts of Bangladesh, grouped by division so the dropdown reads in
+ * a familiar order rather than alphabetically across the whole country.
+ * `DISTRICTS` is the flat list the address and checkout selects render.
+ */
+export const DIVISIONS = [
+  {
+    name: 'Dhaka',
+    nameBn: 'ঢাকা',
+    districts: [
+      'Dhaka', 'Faridpur', 'Gazipur', 'Gopalganj', 'Kishoreganj', 'Madaripur',
+      'Manikganj', 'Munshiganj', 'Narayanganj', 'Narsingdi', 'Rajbari',
+      'Shariatpur', 'Tangail',
+    ],
+  },
+  {
+    name: 'Chattogram',
+    nameBn: 'চট্টগ্রাম',
+    districts: [
+      'Bandarban', 'Brahmanbaria', 'Chandpur', 'Chattogram', 'Cumilla',
+      'Cox’s Bazar', 'Feni', 'Khagrachhari', 'Lakshmipur', 'Noakhali',
+      'Rangamati',
+    ],
+  },
+  {
+    name: 'Rajshahi',
+    nameBn: 'রাজশাহী',
+    districts: [
+      'Bogura', 'Chapainawabganj', 'Joypurhat', 'Naogaon', 'Natore',
+      'Pabna', 'Rajshahi', 'Sirajganj',
+    ],
+  },
+  {
+    name: 'Khulna',
+    nameBn: 'খুলনা',
+    districts: [
+      'Bagerhat', 'Chuadanga', 'Jashore', 'Jhenaidah', 'Khulna', 'Kushtia',
+      'Magura', 'Meherpur', 'Narail', 'Satkhira',
+    ],
+  },
+  {
+    name: 'Barishal',
+    nameBn: 'বরিশাল',
+    districts: [
+      'Barguna', 'Barishal', 'Bhola', 'Jhalokati', 'Patuakhali', 'Pirojpur',
+    ],
+  },
+  {
+    name: 'Sylhet',
+    nameBn: 'সিলেট',
+    districts: ['Habiganj', 'Moulvibazar', 'Sunamganj', 'Sylhet'],
+  },
+  {
+    name: 'Rangpur',
+    nameBn: 'রংপুর',
+    districts: [
+      'Dinajpur', 'Gaibandha', 'Kurigram', 'Lalmonirhat', 'Nilphamari',
+      'Panchagarh', 'Rangpur', 'Thakurgaon',
+    ],
+  },
+  {
+    name: 'Mymensingh',
+    nameBn: 'ময়মনসিংহ',
+    districts: ['Jamalpur', 'Mymensingh', 'Netrokona', 'Sherpur'],
+  },
 ]
+
+export const DISTRICTS = DIVISIONS.flatMap((d) => d.districts)
 
 export const ROUTINE_STEPS = [
   {

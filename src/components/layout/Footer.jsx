@@ -20,6 +20,7 @@ const HELP_LINKS = [
 
 const COMPANY_LINKS = [
   { label: 'About Sadia', to: '/about' },
+  { label: 'Customer reviews', to: '/reviews' },
   { label: 'All products', to: '/shop' },
   { label: 'Offers & sale', to: '/shop?filter=sale' },
   { label: 'Privacy policy', to: '/policy/privacy' },

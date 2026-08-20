@@ -3,6 +3,7 @@ import { Route, Routes } from 'react-router-dom'
 import { Layout } from '@/components/layout/Layout'
 import { CheckoutLayout } from '@/components/layout/CheckoutLayout'
 import Home from '@/pages/Home'
+import { Tracking } from '@/components/common/Tracking'
 
 /**
  * Home ships in the main bundle; everything else is split so the first paint
@@ -15,6 +16,7 @@ const Checkout = lazy(() => import('@/pages/Checkout'))
 const PaymentGateway = lazy(() => import('@/pages/PaymentGateway'))
 const OrderConfirmation = lazy(() => import('@/pages/OrderConfirmation'))
 const TrackOrder = lazy(() => import('@/pages/TrackOrder'))
+const Reviews = lazy(() => import('@/pages/Reviews'))
 const Wishlist = lazy(() => import('@/pages/Wishlist'))
 const About = lazy(() => import('@/pages/About'))
 const Contact = lazy(() => import('@/pages/Contact'))
@@ -40,6 +42,7 @@ function RouteFallback() {
 export default function App() {
   return (
     <Suspense fallback={<RouteFallback />}>
+      <Tracking />
       <Routes>
         {/* The admin panel is a separate app under /admin/*. */}
         <Route path="/admin/*" element={<AdminApp />} />
@@ -58,6 +61,7 @@ export default function App() {
           <Route path="cart" element={<Cart />} />
           <Route path="order/:id" element={<OrderConfirmation />} />
           <Route path="track-order" element={<TrackOrder />} />
+          <Route path="reviews" element={<Reviews />} />
           <Route path="wishlist" element={<Wishlist />} />
           <Route path="login" element={<AccountAuth mode="login" />} />
           <Route path="register" element={<AccountAuth mode="register" />} />

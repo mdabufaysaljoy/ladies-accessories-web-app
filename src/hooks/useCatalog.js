@@ -18,6 +18,8 @@ export function adaptProduct(p) {
     colors: p.colors ?? [],
     sizes: p.sizes ?? [],
     tags: p.tags ?? [],
+    images: p.images ?? [],
+    videos: p.videos ?? [],
     image: p.images?.[0]?.url ?? p.image ?? null,
     compareAt: p.compareAt || 0,
   }

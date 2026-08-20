@@ -1,47 +1,39 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ProductArt } from '@/components/product/ProductArt'
+import { ProductGallery } from '@/components/product/ProductGallery'
 import { ProductGrid } from '@/components/product/ProductGrid'
 import { ColorPicker, QtyStepper, SizePicker } from '@/components/product/VariantPicker'
 import { Button } from '@/components/ui/Button'
 import { Icon } from '@/components/ui/Icon'
 import { Rating } from '@/components/ui/Rating'
+import { ReviewSummary, ReviewList } from '@/components/review/ReviewList'
+import { ReviewForm } from '@/components/review/ReviewForm'
 import { Accordion } from '@/components/ui/Accordion'
 import { Breadcrumb } from '@/components/ui/Breadcrumb'
 import { Section, SectionHeader } from '@/components/ui/Section'
 import { usePageMeta } from '@/components/common/PageShell'
 import { useProduct } from '@/hooks/useCatalog'
+import { useReviews } from '@/hooks/useReviews'
 import { QuickOrder } from '@/components/common/QuickOrder'
 import { useSettings } from '@/context/SettingsContext'
 import { useCategories } from '@/hooks/useCategories'
-import { TESTIMONIALS } from '@/data/content'
 import { useStore } from '@/context/StoreContext'
+import { trackProductView } from '@/lib/tracking'
 import { cx, percentOff, taka } from '@/utils/format'
 import NotFound from './NotFound'
 
-/** Four framings of the same generated art, standing in for a photo gallery. */
-const GALLERY_VIEWS = [
-  { id: 'front', label: 'Front', decorative: true, transform: 'none' },
-  { id: 'detail', label: 'Detail', decorative: false, transform: 'scale(1.9) translate(-6%, 4%)' },
-  { id: 'styled', label: 'Styled', decorative: true, transform: 'scale(1.25) translate(9%, -5%)' },
-  { id: 'packed', label: 'Packaging', decorative: false, transform: 'scale(0.82) rotate(-4deg)' },
-]
-
-function ratingBreakdown(product) {
-  // Deterministic distribution weighted toward the product's actual rating.
-  const total = product.reviews
-  const weights = [0.02, 0.02, 0.05, 0.18, 0.73].map((w, i) => w * (1 + (i + 1 - product.rating) * -0.2))
-  const sum = weights.reduce((a, b) => a + b, 0)
-  return [5, 4, 3, 2, 1].map((stars, i) => {
-    const w = weights[4 - i] / sum
-    return { stars, count: Math.round(total * w), pct: Math.round(w * 100) }
-  })
-}
+/**
+ * The top pair (Add to bag / Buy it now) sits two-up on every screen, so the
+ * `lg` size's wide padding has to give. Both labels are short enough to stay
+ * on one line once the padding shrinks — the longer actions below get a full
+ * row each rather than wrapping mid-phrase.
+ */
+const PAIRED = 'flex-1 basis-0 min-w-0 px-3 text-[0.875rem] sm:px-5 sm:text-[0.9375rem]'
 
 export default function ProductDetail() {
   const { slug } = useParams()
   const { product, related, loading } = useProduct(slug)
-  const { zones, storefront, delivery } = useSettings()
+  const { zones, storefront, delivery, contact } = useSettings()
   const categories = useCategories()
   const navigate = useNavigate()
   const { addToCart, toggleWishlist, inWishlist, trackView, recentProducts, toast } = useStore()
@@ -49,7 +41,6 @@ export default function ProductDetail() {
   const [color, setColor] = useState('')
   const [size, setSize] = useState('')
   const [qty, setQty] = useState(1)
-  const [view, setView] = useState('front')
   const [quickOpen, setQuickOpen] = useState(false)
 
   useEffect(() => {
@@ -57,16 +48,18 @@ export default function ProductDetail() {
     setColor(product.colors[0]?.name ?? '')
     setSize(product.sizes[0]?.label ?? '')
     setQty(1)
-    setView('front')
     trackView(product.slug)
+    trackProductView(product)
   }, [product, trackView])
 
   usePageMeta(product?.name, product?.short)
 
-  const reviews = useMemo(
-    () => (product ? TESTIMONIALS.filter((t) => t.product === product.name) : []),
-    [product],
-  )
+  /**
+   * Real, moderated reviews — and whether this shopper may add one. The rule
+   * (delivered order, one review each) is enforced server-side; the page only
+   * renders the answer.
+   */
+  const { reviews, summary, eligibility, refresh: refreshReviews } = useReviews(slug)
 
   if (loading) {
     return (
@@ -87,8 +80,6 @@ export default function ProductDetail() {
   const discount = percentOff(product.price, product.compareAt)
   const saved = inWishlist(product.slug)
   const soldOut = product.stock === 0
-  const activeView = GALLERY_VIEWS.find((v) => v.id === view) ?? GALLERY_VIEWS[0]
-  const breakdown = ratingBreakdown(product)
 
   const variant = { qty, color: color || null, size: size || null }
 
@@ -97,6 +88,29 @@ export default function ProductDetail() {
   const buyNow = () => {
     addToCart(product, { ...variant, silent: true })
     navigate('/checkout')
+  }
+
+  // "Ask about this product" — opens WhatsApp with the product already
+  // described, so Sadia does not have to ask which item they mean.
+  const askOnWhatsApp = () => {
+    const url = typeof window === 'undefined' ? '' : window.location.href
+    const lines = [
+      `Assalamu alaikum! I would like to know more about this product:`,
+      '',
+      `*${product.name}*`,
+      `Price: ${taka(unitPrice)}`,
+      color && `Colour: ${color}`,
+      size && `Size: ${size}`,
+      qty > 1 && `Quantity: ${qty}`,
+      '',
+      url,
+    ].filter(Boolean)
+    const number = String(contact.whatsapp ?? '').replace(/\D/g, '')
+    window.open(
+      `https://wa.me/${number}?text=${encodeURIComponent(lines.join('\n'))}`,
+      '_blank',
+      'noopener,noreferrer',
+    )
   }
 
   const share = async () => {
@@ -128,15 +142,8 @@ export default function ProductDetail() {
         <div className="grid gap-10 lg:grid-cols-2 lg:gap-16">
           {/* gallery */}
           <div className="lg:sticky lg:top-32 lg:self-start">
-            <div className="relative aspect-square overflow-hidden rounded-[1.5rem] bg-sand">
-              <div
-                className="h-full w-full transition-transform duration-[900ms] ease-[cubic-bezier(0.16,1,0.3,1)]"
-                style={{ transform: activeView.transform }}
-              >
-                <ProductArt product={product} decorative={activeView.decorative} priority />
-              </div>
-
-              <div className="pointer-events-none absolute left-4 top-4 flex flex-col gap-2">
+            <ProductGallery product={product}>
+              <div className="pointer-events-none absolute left-4 top-4 z-10 flex flex-col gap-2">
                 {product.badge && (
                   <span className="w-fit rounded-full bg-ink px-3 py-1.5 text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-cream">
                     {product.badge}
@@ -153,33 +160,11 @@ export default function ProductDetail() {
                 type="button"
                 onClick={share}
                 aria-label="Share this product"
-                className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full bg-cream/85 backdrop-blur-sm transition-colors hover:bg-cream"
+                className="absolute right-4 top-4 z-10 grid h-10 w-10 place-items-center rounded-full bg-cream/85 backdrop-blur-sm transition-colors hover:bg-cream"
               >
                 <Icon name="arrowUpRight" size={18} />
               </button>
-            </div>
-
-            <div className="mt-3 grid grid-cols-4 gap-3">
-              {GALLERY_VIEWS.map((v) => (
-                <button
-                  key={v.id}
-                  type="button"
-                  onClick={() => setView(v.id)}
-                  aria-label={`${v.label} view`}
-                  aria-pressed={view === v.id}
-                  className={cx(
-                    'relative aspect-square overflow-hidden rounded-xl bg-sand transition-all duration-300',
-                    view === v.id
-                      ? 'ring-2 ring-ink ring-offset-2 ring-offset-cream'
-                      : 'opacity-65 hover:opacity-100',
-                  )}
-                >
-                  <div style={{ transform: v.transform }} className="h-full w-full">
-                    <ProductArt product={product} decorative={v.decorative} />
-                  </div>
-                </button>
-              ))}
-            </div>
+            </ProductGallery>
           </div>
 
           {/* buy box */}
@@ -247,10 +232,13 @@ export default function ProductDetail() {
               </div>
             </div>
 
-            <div className="mt-8 flex flex-col gap-2.5">
+            <div className="mt-8 space-y-2.5">
               <div className="flex gap-2.5">
-                <Button variant="outline" size="lg" className="flex-1" onClick={add} disabled={soldOut}>
+                <Button variant="outline" size="lg" className={PAIRED} onClick={add} disabled={soldOut}>
                   <Icon name="bag" size={18} /> Add to bag
+                </Button>
+                <Button size="lg" className={PAIRED} onClick={buyNow} disabled={soldOut}>
+                  Buy it now
                 </Button>
                 <button
                   type="button"
@@ -267,9 +255,7 @@ export default function ProductDetail() {
                   <Icon name="heart" size={20} fill={saved} />
                 </button>
               </div>
-              <Button size="lg" full onClick={buyNow} disabled={soldOut}>
-                Buy it now
-              </Button>
+
               {storefront.showQuickOrder !== false && (
                 <Button
                   variant="outline"
@@ -279,9 +265,19 @@ export default function ProductDetail() {
                   disabled={soldOut}
                   className="border-moss text-moss hover:bg-moss hover:text-white"
                 >
-                  <Icon name="cash" size={18} /> Order now — pay on delivery
+                  <Icon name="cash" size={18} className="shrink-0" /> Order now — pay on delivery
                 </Button>
               )}
+
+              <Button
+                variant="outline"
+                size="lg"
+                full
+                onClick={askOnWhatsApp}
+                className="border-[#25D366] text-[#128C4A] hover:bg-[#25D366] hover:text-white"
+              >
+                <Icon name="whatsapp" size={18} className="shrink-0" /> Ask about this product
+              </Button>
             </div>
 
             {/* delivery + payment reassurance */}
@@ -312,28 +308,30 @@ export default function ProductDetail() {
               </p>
             </div>
 
-            {/* details */}
+            {/* details — description and specification stay open: this is the
+                copy that decides the sale, so it should never need a click */}
+            <div className="mt-9 border-t border-ink/10 pt-7">
+              <h2 className="font-display text-[1.375rem] tracking-tight">Description</h2>
+              <div className="mt-3 text-[0.9375rem] leading-relaxed text-ink/70 text-balance-pretty">
+                {product.description}
+              </div>
+            </div>
+
+            <div className="mt-7 rounded-2xl border border-ink/10 p-6">
+              <h2 className="font-display text-[1.375rem] tracking-tight">Details & specification</h2>
+              <ul className="mt-4 space-y-2.5 text-[0.9375rem] leading-relaxed text-ink/70">
+                {product.details.map((d) => (
+                  <li key={d} className="flex items-start gap-2.5">
+                    <Icon name="check" size={15} className="mt-1 shrink-0 text-plum" />
+                    {d}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
             <Accordion
-              className="mt-9"
-              defaultOpen={0}
+              className="mt-7"
               items={[
-                {
-                  title: 'Description',
-                  content: product.description,
-                },
-                {
-                  title: 'Details & specification',
-                  content: (
-                    <ul className="space-y-2">
-                      {product.details.map((d) => (
-                        <li key={d} className="flex items-start gap-2.5">
-                          <Icon name="check" size={15} className="mt-1 shrink-0 text-plum" />
-                          {d}
-                        </li>
-                      ))}
-                    </ul>
-                  ),
-                },
                 { title: 'How to use & care', content: product.care },
                 {
                   title: 'Delivery & returns',
@@ -362,77 +360,30 @@ export default function ProductDetail() {
       {/* reviews */}
       <Section id="reviews" className="bg-sand/50">
         <div className="container-x">
-          <SectionHeader eyebrow="Customer reviews" title={`What people say about the ${product.name}`} />
+          <SectionHeader
+            eyebrow="Customer reviews"
+            title={`What people say about the ${product.name}`}
+          />
 
           <div className="mt-10 grid gap-10 lg:grid-cols-[20rem_1fr] lg:gap-16">
-            <div>
-              <div className="rounded-[1.25rem] bg-cream p-7 text-center">
-                <p className="font-display text-[3.5rem] leading-none">{product.rating.toFixed(1)}</p>
-                <Rating value={product.rating} size={17} className="mt-3 justify-center" />
-                <p className="mt-2.5 text-[0.8125rem] text-ink/50">
-                  Based on {product.reviews} verified purchases
-                </p>
-              </div>
-
-              <ul className="mt-6 space-y-2.5">
-                {breakdown.map((row) => (
-                  <li key={row.stars} className="flex items-center gap-3 text-[0.8125rem]">
-                    <span className="w-8 shrink-0 text-ink/60">{row.stars}★</span>
-                    <span className="h-2 flex-1 overflow-hidden rounded-full bg-ink/10">
-                      <span
-                        className="block h-full rounded-full bg-gold transition-[width] duration-700"
-                        style={{ width: `${row.pct}%` }}
-                      />
-                    </span>
-                    <span className="w-10 shrink-0 text-right text-ink/45">{row.count}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <ReviewSummary summary={summary} />
 
             <div>
-              {reviews.length > 0 ? (
-                <ul className="space-y-5">
-                  {reviews.map((r) => (
-                    <li key={r.name} className="rounded-[1.25rem] bg-cream p-7">
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                          <span className="grid h-10 w-10 place-items-center rounded-full bg-blush font-display text-plum">
-                            {r.name.charAt(0)}
-                          </span>
-                          <div>
-                            <p className="text-[0.9375rem] font-medium">{r.name}</p>
-                            <p className="text-[0.75rem] text-ink/45">{r.location}</p>
-                          </div>
-                        </div>
-                        <span className="flex items-center gap-1.5 rounded-full bg-moss/10 px-3 py-1 text-[0.6875rem] font-medium text-moss">
-                          <Icon name="checkCircle" size={13} /> Verified purchase
-                        </span>
-                      </div>
-                      <Rating value={r.rating} size={15} className="mt-4" />
-                      <p className="mt-3 text-[0.9375rem] leading-relaxed text-ink/70 text-balance-pretty">
-                        {r.body}
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <div className="rounded-[1.25rem] bg-cream p-10 text-center">
-                  <p className="font-display text-xl">No written reviews yet</p>
-                  <p className="mt-2 text-[0.9375rem] text-ink/55">
-                    This product has {product.reviews} star ratings. Be the first to write about it.
-                  </p>
-                </div>
-              )}
+              <ReviewList
+                reviews={reviews}
+                empty={{
+                  title: 'No reviews yet',
+                  body: 'Be the first to write about this one.',
+                }}
+              />
 
-              <div className="mt-6 rounded-[1.25rem] border border-dashed border-ink/20 p-7 text-center">
-                <p className="text-[0.9375rem] font-medium">Bought this already?</p>
-                <p className="mt-1.5 text-[0.875rem] text-ink/55">
-                  Reviews open once your order is marked delivered.
-                </p>
-                <Button to="/track-order" variant="outline" size="sm" className="mt-4">
-                  Find my order
-                </Button>
+              <div className="mt-6">
+                <ReviewForm
+                  productSlug={product.slug}
+                  productName={product.name}
+                  eligibility={eligibility}
+                  onSubmitted={refreshReviews}
+                />
               </div>
             </div>
           </div>

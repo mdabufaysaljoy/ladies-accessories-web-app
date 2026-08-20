@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Icon } from '@/components/ui/Icon'
@@ -8,6 +9,7 @@ import { EmptyState, usePageMeta } from '@/components/common/PageShell'
 import { useWhatsAppLink } from '@/context/SettingsContext'
 import { bestsellers } from '@/data/products'
 import { useStore } from '@/context/StoreContext'
+import { trackPurchase } from '@/lib/tracking'
 import { cx, formatDate, taka } from '@/utils/format'
 
 const TIMELINE = [
@@ -52,6 +54,19 @@ export default function OrderConfirmation() {
   const waLink = useWhatsAppLink(order ? `Hi! I just placed order ${order.orderNumber}.` : undefined)
 
   usePageMeta(order ? `Order ${order.orderNumber}` : 'Order')
+
+  /**
+   * Browser-side Purchase. The server sends its own copy from the saved order;
+   * both use the order number as the event id, so Meta keeps exactly one. The
+   * ref stops a re-render (or React's StrictMode double-mount in dev) from
+   * reporting the same sale twice.
+   */
+  const purchaseTracked = useRef(false)
+  useEffect(() => {
+    if (!order || purchaseTracked.current) return
+    purchaseTracked.current = true
+    trackPurchase(order)
+  }, [order])
 
   if (!order) {
     return (

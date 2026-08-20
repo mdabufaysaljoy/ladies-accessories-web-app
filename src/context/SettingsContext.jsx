@@ -53,6 +53,7 @@ const FALLBACK = {
   faqs: [],
   policies: [],
   seo: {},
+  analytics: {},
 }
 
 const LANG_KEY = 'gbs.lang'
@@ -132,6 +133,8 @@ export function SettingsProvider({ children }) {
       storefront: settings.storefront ?? FALLBACK.storefront,
       faqs: settings.faqs ?? [],
       policies: settings.policies ?? [],
+      /** Public tracking IDs only — the CAPI token never leaves the server. */
+      analytics: settings.analytics ?? FALLBACK.analytics,
     }),
     [settings, loading, online, load, lang, setLang, tf],
   )

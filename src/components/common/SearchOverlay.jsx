@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { trackSearch } from '@/lib/tracking'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { Icon } from '@/components/ui/Icon'
@@ -35,6 +36,17 @@ export function SearchOverlay() {
   }, [searchOpen])
 
   useEffect(() => setCursor(0), [query])
+
+  /**
+   * Search intent, reported once the shopper stops typing — firing per
+   * keystroke would send "h", "hi", "hij" as three separate searches.
+   */
+  useEffect(() => {
+    const term = query.trim()
+    if (term.length < 3) return
+    const t = setTimeout(() => trackSearch(term), 900)
+    return () => clearTimeout(t)
+  }, [query])
 
   // Open with ⌘K / Ctrl-K from anywhere.
   useEffect(() => {

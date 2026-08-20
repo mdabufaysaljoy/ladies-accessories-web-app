@@ -128,6 +128,21 @@ export default function SettingsPage() {
     }
   }
 
+  /** Fires a real event at Meta so the shop can confirm the token works. */
+  const testPixel = async () => {
+    try {
+      const res = await adminApi.post('/track/test', {})
+      push(
+        res.simulated
+          ? 'Pixel not fully configured — the event was simulated'
+          : `Test event accepted by Meta${res.fbTraceId ? ` (trace ${res.fbTraceId})` : ''}`,
+        res.simulated ? 'info' : 'success',
+      )
+    } catch (err) {
+      push(err.message, 'error')
+    }
+  }
+
   const testEmail = async () => {
     try {
       const res = await adminApi.post('/settings/test-email', {})
@@ -984,17 +999,93 @@ export default function SettingsPage() {
               </div>
             </Card>
 
-            <Card title="Analytics & tracking">
+            <Card
+              title="Facebook / Meta tracking"
+              description="Pixel in the browser, Conversions API from the server"
+              actions={
+                <Badge tone={data.integrations.analytics.facebookCapiEnabled && data.integrations.analytics.facebookAccessTokenSet ? 'success' : data.integrations.analytics.facebookPixelId ? 'warning' : 'neutral'}>
+                  {data.integrations.analytics.facebookCapiEnabled && data.integrations.analytics.facebookAccessTokenSet
+                    ? 'Pixel + CAPI'
+                    : data.integrations.analytics.facebookPixelId
+                      ? 'Pixel only'
+                      : 'Off'}
+                </Badge>
+              }
+            >
               <div className="space-y-4">
-                <Field label="Facebook Pixel ID">
-                  <Input value={data.integrations.analytics.facebookPixelId ?? ''} onChange={(e) => setDeep('integrations', 'analytics', { facebookPixelId: e.target.value })} placeholder="1234567890" />
+                <Field label="Pixel ID" hint="Events Manager → Data sources → your pixel. Just the number.">
+                  <Input value={data.integrations.analytics.facebookPixelId ?? ''} onChange={(e) => setDeep('integrations', 'analytics', { facebookPixelId: e.target.value })} placeholder="1234567890123456" />
                 </Field>
-                <Field label="Google Analytics ID">
+
+                <div className="rounded-xl border border-ink/10 p-3">
+                  <Toggle
+                    checked={Boolean(data.integrations.analytics.facebookCapiEnabled)}
+                    onChange={(v) => setDeep('integrations', 'analytics', { facebookCapiEnabled: v })}
+                    label="Send events from the server (Conversions API)"
+                  />
+                  <p className="mt-2 text-[0.75rem] leading-relaxed text-ink/55">
+                    Roughly a third of shoppers block the browser pixel. With this on, every
+                    event is also sent server-to-server and deduplicated, so your ad reporting
+                    and optimisation see the sales you actually made.
+                  </p>
+                </div>
+
+                <SecretField
+                  label="Conversions API access token"
+                  hint="Events Manager → Settings → Conversions API → Generate access token"
+                  isSet={data.integrations.analytics.facebookAccessTokenSet}
+                  value={data.integrations.analytics.facebookAccessToken}
+                  onChange={(v) => setDeep('integrations', 'analytics', { facebookAccessToken: v })}
+                  placeholder="EAAG..."
+                />
+
+                <Field label="Test event code" hint="Only while testing — clear it once events look right in Events Manager.">
+                  <Input value={data.integrations.analytics.facebookTestEventCode ?? ''} onChange={(e) => setDeep('integrations', 'analytics', { facebookTestEventCode: e.target.value })} placeholder="TEST12345" />
+                </Field>
+
+                <Field label="Domain verification code" hint="Business Settings → Brand safety → Domains. Paste the content value only.">
+                  <Input value={data.integrations.analytics.facebookDomainVerification ?? ''} onChange={(e) => setDeep('integrations', 'analytics', { facebookDomainVerification: e.target.value })} placeholder="abc123def456..." />
+                </Field>
+
+                <div className="flex flex-wrap items-center gap-2 border-t border-ink/10 pt-3">
+                  <Btn size="sm" variant="ghost" onClick={testPixel} disabled={dirty}>
+                    <Icon name="sparkle" size={14} /> Send test event
+                  </Btn>
+                  <span className="text-[0.75rem] text-ink/50">
+                    {dirty ? 'Save your changes first' : 'Then check Events Manager → Test events'}
+                  </span>
+                </div>
+              </div>
+            </Card>
+
+            <Card title="Google tracking" description="Analytics, Ads conversions and Tag Manager">
+              <div className="space-y-4">
+                <Field label="Google Analytics 4 ID" hint="Admin → Data streams → Measurement ID">
                   <Input value={data.integrations.analytics.googleAnalyticsId ?? ''} onChange={(e) => setDeep('integrations', 'analytics', { googleAnalyticsId: e.target.value })} placeholder="G-XXXXXXXXXX" />
                 </Field>
-                <Field label="Google Tag Manager ID">
+                <Field label="Google Ads conversion ID" hint="Google Ads → Goals → Conversions → your action">
+                  <Input value={data.integrations.analytics.googleAdsConversionId ?? ''} onChange={(e) => setDeep('integrations', 'analytics', { googleAdsConversionId: e.target.value })} placeholder="AW-123456789" />
+                </Field>
+                <Field label="Purchase conversion label" hint="The label shown next to the conversion ID in the tag setup">
+                  <Input value={data.integrations.analytics.googleAdsPurchaseLabel ?? ''} onChange={(e) => setDeep('integrations', 'analytics', { googleAdsPurchaseLabel: e.target.value })} placeholder="AbC-D_efG12h34i5j6" />
+                </Field>
+                <Field label="Google Tag Manager ID" hint="Optional — only if you manage tags through GTM instead.">
                   <Input value={data.integrations.analytics.googleTagManagerId ?? ''} onChange={(e) => setDeep('integrations', 'analytics', { googleTagManagerId: e.target.value })} placeholder="GTM-XXXXXXX" />
                 </Field>
+                <Field label="Search Console verification" hint="The google-site-verification content value.">
+                  <Input value={data.integrations.analytics.googleSiteVerification ?? ''} onChange={(e) => setDeep('integrations', 'analytics', { googleSiteVerification: e.target.value })} placeholder="abc123..." />
+                </Field>
+
+                <div className="border-t border-ink/10 pt-3">
+                  <Toggle
+                    checked={Boolean(data.integrations.analytics.debug)}
+                    onChange={(v) => setDeep('integrations', 'analytics', { debug: v })}
+                    label="Log every tracked event on the server"
+                  />
+                  <p className="mt-2 text-[0.75rem] text-ink/55">
+                    For debugging only — leave off in normal operation.
+                  </p>
+                </div>
               </div>
             </Card>
           </div>

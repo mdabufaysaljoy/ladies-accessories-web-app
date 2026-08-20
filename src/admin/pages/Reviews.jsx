@@ -7,17 +7,18 @@ import { formatDate } from '@/utils/format'
 
 export default function Reviews() {
   const [status, setStatus] = useState('pending')
+  const [kind, setKind] = useState('all')
   const [data, setData] = useState(null)
   const { push, node } = useToasts()
 
   const load = useCallback(async () => {
     try {
-      setData(await adminApi.get(`/reviews${qs({ status, limit: 50 })}`))
+      setData(await adminApi.get(`/reviews${qs({ status, kind, limit: 50 })}`))
     } catch (err) {
       push(err.message, 'error')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status])
+  }, [status, kind])
 
   useEffect(() => { load() }, [load])
 
@@ -49,6 +50,18 @@ export default function Reviews() {
           active={status}
           onChange={setStatus}
         />
+
+        <div className="mt-3">
+          <Tabs
+            tabs={[
+              { id: 'all', label: 'All reviews' },
+              { id: 'product', label: 'Product reviews' },
+              { id: 'shop', label: 'Shop reviews' },
+            ]}
+            active={kind}
+            onChange={setKind}
+          />
+        </div>
       </div>
 
       {!data ? (
@@ -80,8 +93,17 @@ export default function Reviews() {
               </div>
 
               <Rating value={r.rating} size={15} className="mt-3" />
-              <p className="mt-2.5 text-[0.875rem] leading-relaxed text-ink/70">{r.body}</p>
-              <p className="mt-3 text-[0.75rem] text-ink/45">On: {r.productSlug}</p>
+              {r.title && <p className="mt-2 text-[0.9375rem] font-medium">{r.title}</p>}
+              <p className="mt-2.5 text-[0.875rem] leading-relaxed text-ink/70">
+                {r.body || <span className="text-ink/35">Rating only — no written review.</span>}
+              </p>
+
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <Badge tone={r.kind === 'shop' ? 'purple' : 'neutral'}>
+                  {r.kind === 'shop' ? 'About the shop' : r.productSlug}
+                </Badge>
+                {r.phone && <span className="text-[0.75rem] text-ink/45">{r.phone}</span>}
+              </div>
 
               {status !== 'published' && (
                 <div className="mt-4 flex gap-2 border-t border-ink/8 pt-3.5">

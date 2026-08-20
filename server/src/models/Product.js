@@ -27,6 +27,20 @@ const productSchema = new mongoose.Schema(
     specifications: [{ label: String, value: String }],
 
     images: [{ url: String, alt: String }],
+
+    /**
+     * YouTube videos shown in the gallery beside the photos. Only the id is
+     * authoritative — it is re-derived from the pasted URL on every write, so
+     * the storefront always builds its own embed URL rather than rendering a
+     * link somebody typed.
+     */
+    videos: [
+      {
+        videoId: { type: String, required: true },
+        url: String,
+        title: { type: String, default: '' },
+      },
+    ],
     art: { shape: { type: String, default: 'jar' }, hue: { type: Number, default: 320 } },
 
     colors: [{ name: String, hex: String, stock: { type: Number, default: 0 } }],

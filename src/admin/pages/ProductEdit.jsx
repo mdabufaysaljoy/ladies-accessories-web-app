@@ -8,6 +8,7 @@ import {
 import { Icon } from '@/components/ui/Icon'
 import { ProductArt, ART_SHAPE_OPTIONS } from '@/components/product/ProductArt'
 import { ImageManager } from '../components/ImageManager'
+import { VideoManager } from '../components/VideoManager'
 import { slugifyClient, taka } from '@/utils/format'
 
 const BLANK = {
@@ -15,7 +16,7 @@ const BLANK = {
   category: '', subcategory: '',
   price: 0, compareAt: 0, costPrice: 0,
   short: '', shortBn: '', description: '', descriptionBn: '', care: '',
-  details: [], specifications: [], images: [],
+  details: [], specifications: [], images: [], videos: [],
   art: { shape: 'jar', hue: 320 },
   colors: [], sizes: [],
   stock: 0, lowStockThreshold: 5, trackInventory: true,
@@ -28,7 +29,7 @@ const TABS = [
   { id: 'basics', label: 'Basics' },
   { id: 'details', label: 'Description & specs' },
   { id: 'variants', label: 'Variants & stock' },
-  { id: 'media', label: 'Image' },
+  { id: 'media', label: 'Media' },
   { id: 'seo', label: 'SEO' },
 ]
 
@@ -407,6 +408,16 @@ export default function ProductEdit() {
                     value={form.images ?? []}
                     onChange={(images) => set('images', images)}
                     alt={form.name}
+                  />
+                </Field>
+
+                <Field
+                  label="Product videos"
+                  hint="YouTube links — shown in the gallery after the photos"
+                >
+                  <VideoManager
+                    value={form.videos ?? []}
+                    onChange={(videos) => set('videos', videos)}
                   />
                 </Field>
 

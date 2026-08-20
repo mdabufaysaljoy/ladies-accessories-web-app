@@ -1,8 +1,14 @@
 import { Router } from 'express'
 import { Product } from '../models/Product.js'
 import { requireAuth, requireAbility } from '../middleware/auth.js'
-import { ApiError, asyncHandler, paginate, meta, slugify } from '../utils/helpers.js'
+import { ApiError, asyncHandler, paginate, meta, slugify, parseYouTubeId } from '../utils/helpers.js'
 import { logActivity } from '../models/ActivityLog.js'
+import { importUpload } from '../middleware/upload.js'
+import {
+  buildTemplate,
+  csvToObjects,
+  importProducts,
+} from '../services/productImport.js'
 
 const router = Router()
 
@@ -136,14 +142,80 @@ router.get(
   }),
 )
 
+
+/**
+ * Fields the server owns. They are stripped from any client payload before it
+ * touches a document.
+ *
+ * `__v` is the one that bites: the editor loads a product, the first save
+ * increments the stored version, and the form still holds the old number — so
+ * a second save from the same page writes a stale `__v`, Mongoose's optimistic
+ * concurrency query `{_id, __v}` matches nothing, and `save()` throws a
+ * VersionError. Any array edit (images, videos, specifications) increments the
+ * version, so this fires on the ordinary "save twice" path.
+ *
+ * The rest are either virtuals, counters the server increments, or the rating
+ * recomputed from moderated reviews — echoing a stale copy of those back would
+ * silently undo whatever changed since the form was opened.
+ */
+const SERVER_OWNED = [
+  '_id', 'id', '__v', 'createdAt', 'updatedAt',
+  'inStock', 'discountPercent',
+  'soldCount', 'viewCount',
+  'rating', 'reviewCount',
+]
+
+const stripServerOwned = (payload) => {
+  const clean = { ...payload }
+  SERVER_OWNED.forEach((key) => delete clean[key])
+  return clean
+}
+
+/**
+ * Rebuilds the `videos` array from whatever the client sent.
+ *
+ * The id is always re-derived here rather than trusted, so a crafted `videoId`
+ * cannot end up inside the storefront's iframe src. A URL that is not YouTube
+ * is rejected with the row it came from, rather than silently dropped — a shop
+ * owner who pastes a Facebook video link needs to be told why it vanished.
+ */
+function sanitiseVideos(input) {
+  if (input === undefined) return undefined
+  const list = Array.isArray(input) ? input : [input]
+
+  const videos = []
+  const seen = new Set()
+  for (const entry of list) {
+    if (!entry) continue
+    const source = typeof entry === 'string' ? entry : (entry.url ?? entry.videoId ?? '')
+    if (!String(source).trim()) continue
+
+    const videoId = parseYouTubeId(source)
+    if (!videoId) {
+      throw ApiError.badRequest(`“${String(source).slice(0, 80)}” is not a YouTube link`)
+    }
+    if (seen.has(videoId)) continue
+    seen.add(videoId)
+
+    videos.push({
+      videoId,
+      url: `https://www.youtube.com/watch?v=${videoId}`,
+      title: typeof entry === 'object' ? String(entry.title ?? '').slice(0, 160) : '',
+    })
+  }
+  return videos.slice(0, 8)
+}
+
 router.post(
   '/',
   requireAuth,
   requireAbility('products'),
   asyncHandler(async (req, res) => {
-    const payload = { ...req.body }
+    const payload = stripServerOwned(req.body)
     if (payload.slug) payload.slug = slugify(payload.slug)
-    delete payload._id
+
+    const videos = sanitiseVideos(payload.videos)
+    if (videos !== undefined) payload.videos = videos
 
     const product = await Product.create(payload)
 
@@ -165,10 +237,11 @@ router.patch(
     const product = await Product.findById(req.params.id)
     if (!product) throw ApiError.notFound('Product not found')
 
-    const payload = { ...req.body }
-    delete payload._id
-    delete payload.id
+    const payload = stripServerOwned(req.body)
     if (payload.slug) payload.slug = slugify(payload.slug)
+
+    const videos = sanitiseVideos(payload.videos)
+    if (videos !== undefined) payload.videos = videos
 
     const priceChanged = payload.price != null && payload.price !== product.price
     Object.assign(product, payload)
@@ -206,6 +279,94 @@ router.post(
 
     const product = await Product.create(copy)
     res.status(201).json({ product })
+  }),
+)
+
+/* ------------------------------ bulk import ------------------------------ */
+
+/** A ready-made file with the right headers and one worked example row. */
+router.get(
+  '/import/template',
+  requireAuth,
+  requireAbility('products'),
+  asyncHandler(async (req, res) => {
+    const format = req.query.format === 'json' ? 'json' : 'csv'
+    const body = buildTemplate(format)
+    res.setHeader('Content-Type', format === 'json' ? 'application/json' : 'text/csv; charset=utf-8')
+    res.setHeader('Content-Disposition', `attachment; filename="product-import-template.${format}"`)
+    res.send(body)
+  }),
+)
+
+/**
+ * POST /api/products/import
+ *
+ * Accepts a `.csv`/`.json` upload (field name `file`) or a raw `rows` array in
+ * the body. Always validates the whole file first; `dryRun` returns the same
+ * per-row verdicts without writing, which is what the admin previews before
+ * committing. Nothing is written unless every row has been checked.
+ */
+router.post(
+  '/import',
+  requireAuth,
+  requireAbility('products'),
+  importUpload.single('file'),
+  asyncHandler(async (req, res) => {
+    const mode = req.body?.mode === 'upsert' ? 'upsert' : 'create'
+    // multipart bodies are strings, so "false" has to be handled explicitly.
+    const dryRun = req.body?.dryRun !== 'false' && req.body?.dryRun !== false
+
+    let rows = []
+    if (req.file) {
+      const text = req.file.buffer.toString('utf8')
+      const isJson =
+        req.file.originalname.toLowerCase().endsWith('.json') ||
+        req.file.mimetype === 'application/json'
+
+      if (isJson) {
+        let parsed
+        try {
+          parsed = JSON.parse(text)
+        } catch (err) {
+          throw ApiError.badRequest(`That JSON file could not be read: ${err.message}`)
+        }
+        // Accept a bare array or the shape our own export produces.
+        rows = Array.isArray(parsed) ? parsed : (parsed.products ?? parsed.rows ?? [])
+        if (!Array.isArray(rows)) {
+          throw ApiError.badRequest('JSON must be an array of products, or { "products": [...] }')
+        }
+      } else {
+        rows = csvToObjects(text)
+      }
+    } else if (Array.isArray(req.body?.rows)) {
+      rows = req.body.rows
+    } else {
+      throw ApiError.badRequest('Attach a .csv or .json file to import')
+    }
+
+    if (!rows.length) throw ApiError.badRequest('That file has no product rows in it')
+    if (rows.length > 2000) {
+      throw ApiError.badRequest(`That file has ${rows.length} rows. Please split it into files of 2000 or fewer.`)
+    }
+
+    let report
+    try {
+      report = await importProducts(rows, { mode, dryRun })
+    } catch (err) {
+      throw ApiError.badRequest(err.message)
+    }
+
+    if (!dryRun && (report.summary.created || report.summary.updated)) {
+      await logActivity({
+        actor: req.user._id,
+        actorName: req.user.name,
+        action: 'product.import',
+        entity: 'Product',
+        summary: `Imported products — ${report.summary.created} created, ${report.summary.updated} updated, ${report.summary.errors} failed`,
+      })
+    }
+
+    res.json(report)
   }),
 )
 

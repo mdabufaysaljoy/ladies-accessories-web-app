@@ -67,6 +67,7 @@ const SECRET_PATHS = new Set([
   'integrations.meta.instagram.accessToken',
   'integrations.email.smtpPassword',
   'integrations.sms.apiKey',
+  'integrations.analytics.facebookAccessToken',
 ])
 const isSecretPath = (p) => SECRET_PATHS.has(p)
 
