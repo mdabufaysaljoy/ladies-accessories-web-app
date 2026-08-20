@@ -194,6 +194,16 @@ export function Header() {
                 >
                   Offers
                 </NavLink>
+
+                {/* Guests order without an account, so tracking has to be
+                    reachable without one too — not buried in the footer. */}
+                <NavLink
+                  to="/track-order"
+                  className="link-underline flex items-center gap-1.5 text-[0.875rem] font-medium tracking-tight transition-colors hover:text-plum"
+                >
+                  <Icon name="truck" size={15} />
+                  Track order
+                </NavLink>
               </nav>
 
               <div className="flex items-center gap-0.5">

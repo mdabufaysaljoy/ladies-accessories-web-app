@@ -45,6 +45,16 @@ const orderSchema = new mongoose.Schema(
   {
     orderNumber: { type: String, unique: true, index: true },
 
+    /**
+     * Set when the order was placed while signed in. This is the authoritative
+     * link between an order and an account — order history matches on this
+     * first, falling back to `customer.phone` for guest orders and anything
+     * placed before this field existed. Deliberately separate from `customer`
+     * below, which is a point-in-time snapshot of the delivery contact and may
+     * be a different phone/name (ordering for someone else).
+     */
+    account: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', index: true },
+
     customer: {
       name: { type: String, required: true },
       phone: { type: String, required: true, index: true },

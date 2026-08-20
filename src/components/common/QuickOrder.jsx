@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { Icon } from '@/components/ui/Icon'
 import { ProductArt } from '@/components/product/ProductArt'
 import { QtyStepper } from '@/components/product/VariantPicker'
-import { api } from '@/lib/api'
+import { customerApi } from '@/lib/api'
 import { useSettings } from '@/context/SettingsContext'
 import { useStore } from '@/context/StoreContext'
 import { useEscape, useScrollLock } from '@/hooks/useScrollLock'
@@ -55,7 +55,7 @@ export function QuickOrder({ product, open, onClose, color, size, initialQty = 1
 
     setBusy(true)
     try {
-      const { order } = await api.post('/orders', {
+      const { order } = await customerApi.post('/orders', {
         customer: {
           name: form.name,
           phone: form.phone,

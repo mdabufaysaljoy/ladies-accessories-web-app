@@ -5,6 +5,7 @@
 const BASE = import.meta.env.VITE_API_URL ?? ''
 
 const TOKEN_KEY = 'gbs.admin.token'
+const ACCOUNT_TOKEN_KEY = 'gbs.account.token'
 
 export const getToken = () => {
   try {
@@ -23,6 +24,14 @@ export const setToken = (token) => {
   }
 }
 
+const getAccountToken = () => {
+  try {
+    return localStorage.getItem(ACCOUNT_TOKEN_KEY)
+  } catch {
+    return null
+  }
+}
+
 export class ApiError extends Error {
   constructor(status, message, details) {
     super(message)
@@ -31,11 +40,24 @@ export class ApiError extends Error {
   }
 }
 
-async function request(path, { method = 'GET', body, auth = false, isForm = false, signal } = {}) {
+async function request(
+  path,
+  { method = 'GET', body, auth = false, asCustomer = false, isForm = false, signal } = {},
+) {
   const headers = {}
   if (!isForm && body !== undefined) headers['Content-Type'] = 'application/json'
   if (auth) {
     const token = getToken()
+    if (token) headers.Authorization = `Bearer ${token}`
+  } else if (asCustomer) {
+    /**
+     * Public endpoints that behave differently for a signed-in shopper (placing
+     * an order, so it links to their account). The cookie alone is not enough
+     * to rely on: on a split-domain deploy (domain.com → api.domain.com) it is
+     * cross-site, so Safari/Brave block it by default. The bearer token works
+     * on every browser and deployment shape.
+     */
+    const token = getAccountToken()
     if (token) headers.Authorization = `Bearer ${token}`
   }
 
@@ -77,6 +99,16 @@ const verbs = (auth) => ({
 export const api = verbs(false)
 /** Authenticated admin calls. */
 export const adminApi = verbs(true)
+
+/**
+ * Public calls that should carry the shopper's session if there is one —
+ * placing an order, so the server can link it to their account. Falls back to
+ * an anonymous request when signed out, so guest checkout is unaffected.
+ */
+export const customerApi = {
+  post: (path, body, opts) => request(path, { ...opts, method: 'POST', body, asCustomer: true }),
+  get: (path, opts) => request(path, { ...opts, asCustomer: true }),
+}
 
 export const qs = (params) => {
   const search = new URLSearchParams()

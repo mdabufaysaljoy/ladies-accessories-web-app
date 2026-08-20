@@ -5,7 +5,8 @@ import { Icon } from '@/components/ui/Icon'
 import { PageHeader, usePageMeta } from '@/components/common/PageShell'
 import { useAccount, request } from '@/context/AccountContext'
 import { useSettings } from '@/context/SettingsContext'
-import { cx, formatDate, taka } from '@/utils/format'
+import { DISTRICTS } from '@/data/content'
+import { cx, formatDate, isValidBdPhone, taka } from '@/utils/format'
 
 const STATUS_TONE = {
   pending: 'bg-gold/15 text-gold',
@@ -20,47 +21,148 @@ const STATUS_TONE = {
 const inputClass =
   'h-11 w-full rounded-xl border border-ink/15 bg-cream px-4 text-[0.9375rem] outline-none transition-colors focus:border-ink'
 
-function AddressForm({ initial, zones, onCancel, onSave }) {
-  const [form, setForm] = useState(
-    initial ?? { label: 'Home', name: '', phone: '', district: 'Dhaka', area: '', address: '', zoneId: zones[0]?.id },
-  )
+function AddressForm({ initial, zones, defaults, onCancel, onSave }) {
+  const [form, setForm] = useState(() => ({
+    label: 'Home',
+    name: defaults?.name ?? '',
+    phone: defaults?.phone ?? '',
+    district: 'Dhaka',
+    area: '',
+    address: '',
+    zoneId: zones[0]?.id ?? 'dhaka-city',
+    ...initial,
+  }))
   const [busy, setBusy] = useState(false)
-  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
+  const [errors, setErrors] = useState({})
+  const [serverError, setServerError] = useState('')
+
+  const set = (k) => (e) => {
+    setForm((f) => ({ ...f, [k]: e.target.value }))
+    setErrors((x) => ({ ...x, [k]: undefined }))
+    setServerError('')
+  }
+
+  // The zone list arrives from settings asynchronously — once it lands, adopt
+  // the first zone rather than leaving zoneId undefined from the initial render.
+  useEffect(() => {
+    if (!form.zoneId && zones.length) setForm((f) => ({ ...f, zoneId: zones[0].id }))
+  }, [zones, form.zoneId])
+
+  const submit = async (e) => {
+    e.preventDefault()
+
+    // Mirrors the server's rules so the customer sees the problem inline
+    // instead of the form silently doing nothing.
+    const next = {}
+    if (String(form.address).trim().length < 10) {
+      next.address = 'Please write the full address — house, road and area'
+    }
+    if (!String(form.area).trim()) next.area = 'Which area or thana?'
+    if (form.phone && !isValidBdPhone(form.phone)) next.phone = 'Enter a valid number (01XXXXXXXXX)'
+
+    setErrors(next)
+    if (Object.keys(next).length) return
+
+    setBusy(true)
+    setServerError('')
+    try {
+      await onSave(form)
+    } catch (err) {
+      // Without this the rejection is swallowed and the button just spins back
+      // to idle with no explanation — the original bug.
+      setServerError(err.message ?? 'Could not save this address. Please try again.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const fieldError = (key) =>
+    errors[key] ? (
+      <span className="mt-1 block text-[0.75rem] text-red-600">{errors[key]}</span>
+    ) : null
 
   return (
-    <form
-      onSubmit={async (e) => {
-        e.preventDefault()
-        setBusy(true)
-        try {
-          await onSave(form)
-        } finally {
-          setBusy(false)
-        }
-      }}
-      className="space-y-3 rounded-2xl border border-ink/12 p-5"
-    >
+    <form onSubmit={submit} className="space-y-3 rounded-2xl border border-ink/12 p-5">
       <div className="grid gap-3 sm:grid-cols-2">
-        <input value={form.label} onChange={set('label')} placeholder="Home / Office" className={inputClass} />
-        <input value={form.name} onChange={set('name')} placeholder="Recipient name" className={inputClass} />
-        <input value={form.phone} onChange={set('phone')} placeholder="01XXXXXXXXX" inputMode="tel" className={inputClass} />
-        <input value={form.area} onChange={set('area')} placeholder="Area / Thana" className={inputClass} />
-        <input value={form.district} onChange={set('district')} placeholder="District" className={inputClass} />
-        <select value={form.zoneId} onChange={set('zoneId')} className={cx(inputClass, 'cursor-pointer')}>
-          {zones.map((z) => (
-            <option key={z.id} value={z.id}>
-              {z.label}
-            </option>
-          ))}
-        </select>
+        <label className="block">
+          <span className="text-[0.75rem] font-medium text-ink/60">Label</span>
+          <input value={form.label} onChange={set('label')} placeholder="Home / Office" className={cx('mt-1', inputClass)} />
+        </label>
+
+        <label className="block">
+          <span className="text-[0.75rem] font-medium text-ink/60">Recipient name</span>
+          <input value={form.name} onChange={set('name')} placeholder="Full name" className={cx('mt-1', inputClass)} />
+        </label>
+
+        <label className="block">
+          <span className="text-[0.75rem] font-medium text-ink/60">Mobile number</span>
+          <input
+            value={form.phone}
+            onChange={set('phone')}
+            placeholder="01XXXXXXXXX"
+            inputMode="tel"
+            className={cx('mt-1', inputClass, errors.phone && 'border-red-400')}
+          />
+          {fieldError('phone')}
+        </label>
+
+        <label className="block">
+          <span className="text-[0.75rem] font-medium text-ink/60">
+            Area / Thana <span className="text-rose">*</span>
+          </span>
+          <input
+            value={form.area}
+            onChange={set('area')}
+            placeholder="e.g. Dhanmondi"
+            className={cx('mt-1', inputClass, errors.area && 'border-red-400')}
+          />
+          {fieldError('area')}
+        </label>
+
+        <label className="block">
+          <span className="text-[0.75rem] font-medium text-ink/60">District</span>
+          <select value={form.district} onChange={set('district')} className={cx('mt-1', inputClass, 'cursor-pointer')}>
+            {DISTRICTS.map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="block">
+          <span className="text-[0.75rem] font-medium text-ink/60">Delivery area</span>
+          <select value={form.zoneId ?? ''} onChange={set('zoneId')} className={cx('mt-1', inputClass, 'cursor-pointer')}>
+            {zones.map((z) => (
+              <option key={z.id} value={z.id}>
+                {z.label} — {taka(z.charge)}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
-      <textarea
-        value={form.address}
-        onChange={set('address')}
-        rows={2}
-        placeholder="House, road, block — plus any landmark"
-        className={cx(inputClass, 'h-auto resize-none py-3')}
-      />
+
+      <label className="block">
+        <span className="text-[0.75rem] font-medium text-ink/60">
+          Full address <span className="text-rose">*</span>
+        </span>
+        <textarea
+          value={form.address}
+          onChange={set('address')}
+          rows={2}
+          placeholder="House 12, Road 5, Block C — beside the mosque"
+          className={cx('mt-1', inputClass, 'h-auto resize-none py-3', errors.address && 'border-red-400')}
+        />
+        {fieldError('address')}
+      </label>
+
+      {serverError && (
+        <p className="flex items-start gap-2 rounded-xl bg-red-50 px-3.5 py-2.5 text-[0.8125rem] text-red-700">
+          <Icon name="alert" size={15} className="mt-0.5 shrink-0" />
+          {serverError}
+        </p>
+      )}
+
       <div className="flex gap-2">
         <Button type="submit" size="md" loading={busy}>
           Save address
@@ -316,8 +418,10 @@ export default function Account() {
             {showForm ? (
               <AddressForm
                 zones={zones}
+                defaults={{ name: customer.name, phone: customer.phone?.replace(/^88/, '') }}
                 onCancel={() => setShowForm(false)}
                 onSave={async (form) => {
+                  // Errors propagate to AddressForm, which shows them inline.
                   await addAddress(form)
                   setShowForm(false)
                   flash('Address saved')

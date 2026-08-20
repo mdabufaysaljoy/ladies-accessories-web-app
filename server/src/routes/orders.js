@@ -158,6 +158,7 @@ router.post(
         : 0
 
     const order = await Order.create({
+      account: req.customer?._id,
       customer: {
         name: String(customer.name).trim(),
         phone,
@@ -215,13 +216,24 @@ router.post(
       { upsert: true, new: true },
     )
 
-    // Signed-in shoppers can have this address remembered for next time.
-    if (saveAddress && req.customer && String(req.customer._id) === String(customerRecord._id)) {
-      const already = customerRecord.addresses.some(
+    /**
+     * Signed-in shoppers get this address remembered for next time.
+     *
+     * Saved onto `req.customer` — the actual signed-in account — not the
+     * phone-matched `customerRecord`, because those can differ (ordering to a
+     * different contact number, e.g. a gift). The checkbox choice is honoured
+     * normally, but a customer's very first order saves regardless of it: an
+     * account should never come out of its first purchase with zero addresses
+     * saved, which is also what makes checkout autofill work from the second
+     * order onward.
+     */
+    if (req.customer) {
+      const shouldSave = saveAddress || req.customer.addresses.length === 0
+      const already = req.customer.addresses.some(
         (a) => a.address === order.customer.address && a.area === order.customer.area,
       )
-      if (!already) {
-        customerRecord.addresses.push({
+      if (shouldSave && !already) {
+        req.customer.addresses.push({
           label: 'Home',
           name: order.customer.name,
           phone: order.customer.phone,
@@ -230,8 +242,8 @@ router.post(
           address: order.customer.address,
           zoneId: zone.id,
         })
-        if (customerRecord.addresses.length === 1) customerRecord.normaliseAddresses()
-        await customerRecord.save()
+        if (req.customer.addresses.length === 1) req.customer.normaliseAddresses()
+        await req.customer.save()
       }
     }
 

@@ -202,7 +202,14 @@ router.get(
   requireCustomer,
   asyncHandler(async (req, res) => {
     const { page, limit, skip } = paginate(req.query)
-    const filter = { 'customer.phone': req.customer.phone }
+    /**
+     * Matches on the explicit `account` link first (set whenever the order was
+     * placed while signed in), falling back to phone for orders placed as a
+     * guest before this field existed or with an account created afterwards.
+     */
+    const filter = {
+      $or: [{ account: req.customer._id }, { 'customer.phone': req.customer.phone }],
+    }
 
     const [orders, total] = await Promise.all([
       Order.find(filter)
@@ -223,7 +230,8 @@ router.get(
   asyncHandler(async (req, res) => {
     const order = await Order.findOne({
       orderNumber: String(req.params.orderNumber).toUpperCase(),
-      'customer.phone': req.customer.phone, // scoped — cannot read someone else's order
+      // scoped — cannot read someone else's order
+      $or: [{ account: req.customer._id }, { 'customer.phone': req.customer.phone }],
     })
     if (!order) throw ApiError.notFound('Order not found')
     res.json({ order })

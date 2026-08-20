@@ -8,7 +8,7 @@ import { Logo } from '@/components/layout/Logo'
 import { DISTRICTS } from '@/data/content'
 import { useSettings } from '@/context/SettingsContext'
 import { useAccount } from '@/context/AccountContext'
-import { api } from '@/lib/api'
+import { api, customerApi } from '@/lib/api'
 
 import { useStore } from '@/context/StoreContext'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
@@ -232,28 +232,39 @@ export default function Checkout() {
   }
 
   /**
-   * Pre-fills from the signed-in account's default address. Runs once when the
-   * account resolves and only fills blanks, so a guest who has already started
-   * typing never has their input overwritten.
+   * Fills the form from the signed-in account — name, phone, email, and the
+   * default saved address. Everything stays fully editable afterwards; this
+   * only seeds the initial values.
+   *
+   * `autofilledFor` guards it so it runs once per account/address rather than
+   * on every render: without that, a customer editing a pre-filled field would
+   * have their typing reverted on the next render pass.
    */
+  const [autofilledFor, setAutofilledFor] = useState(null)
+
   useEffect(() => {
     if (!isSignedIn || !account) return
+
+    const stamp = `${account.id}:${defaultAddress?.id ?? 'none'}`
+    if (autofilledFor === stamp) return
+
     setForm((f) => ({
       ...f,
-      fullName: f.fullName || account.name || '',
-      phone: f.phone || account.phone?.replace(/^88/, '') || '',
-      email: f.email || account.email || '',
+      fullName: account.name || f.fullName,
+      phone: account.phone?.replace(/^88/, '') || f.phone,
+      email: account.email || f.email,
       ...(defaultAddress
         ? {
-            district: f.district === 'Dhaka' && defaultAddress.district ? defaultAddress.district : f.district,
-            area: f.area || defaultAddress.area || '',
-            address: f.address || defaultAddress.address || '',
+            district: defaultAddress.district || f.district,
+            area: defaultAddress.area || f.area,
+            address: defaultAddress.address || f.address,
           }
         : {}),
     }))
     if (defaultAddress?.zoneId) setZoneId(defaultAddress.zoneId)
+    setAutofilledFor(stamp)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSignedIn, account?.id, defaultAddress?.id])
+  }, [isSignedIn, account?.id, defaultAddress?.id, autofilledFor])
 
   useEffect(() => {
     api
@@ -318,7 +329,7 @@ export default function Checkout() {
     if (form.saveInfo) setSaved({ ...form, notes: '', giftNote: '' })
 
     try {
-      const { order } = await api.post('/orders', {
+      const { order } = await customerApi.post('/orders', {
         customer: {
           name: form.fullName.trim(),
           phone: form.phone.trim(),
