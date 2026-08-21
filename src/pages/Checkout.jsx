@@ -210,7 +210,7 @@ function OrderSummary({ collapsible = false }) {
 export default function Checkout() {
   const navigate = useNavigate()
   const { lines, totals, coupon, zone, zoneId, setZoneId, clearCart, placeOrder, toast } = useStore()
-  const { zones, delivery, isBn } = useSettings()
+  const { zones, delivery, isBn, checkout: checkoutForm } = useSettings()
   const { customer: account, isSignedIn, defaultAddress } = useAccount()
   const [saved, setSaved] = useLocalStorage('gbs.customer', BLANK)
   const [saveAddress, setSaveAddress] = useState(true)
@@ -222,7 +222,13 @@ export default function Checkout() {
   const [step, setStep] = useState(1)
   const [method, setMethod] = useState('cod')
   const [submitting, setSubmitting] = useState(false)
+  /**
+   * When the shop has turned the terms tick off there is nothing for the
+   * shopper to agree to, so the gate starts satisfied rather than blocking a
+   * checkbox that is never rendered.
+   */
   const [agreed, setAgreed] = useState(false)
+  const termsRequired = checkoutForm.requireTerms !== false
 
   usePageMeta('Checkout')
 
@@ -301,8 +307,17 @@ export default function Checkout() {
     const next = {}
     if (form.fullName.trim().length < 3) next.fullName = 'Please enter your full name'
     if (!isValidBdPhone(form.phone)) next.phone = 'Enter a valid Bangladeshi mobile number (01XXXXXXXXX)'
-    if (form.altPhone && !isValidBdPhone(form.altPhone)) next.altPhone = 'This number does not look right'
-    if (form.email && !isValidEmail(form.email)) next.email = 'Enter a valid email address'
+    if (checkoutForm.altPhone === 'required' && !form.altPhone.trim()) {
+      next.altPhone = 'Please add a second number we can reach you on'
+    } else if (checkoutForm.altPhone !== 'off' && form.altPhone && !isValidBdPhone(form.altPhone)) {
+      next.altPhone = 'This number does not look right'
+    }
+
+    if (checkoutForm.email === 'required' && !form.email.trim()) {
+      next.email = 'Please enter your email address'
+    } else if (checkoutForm.email !== 'off' && form.email && !isValidEmail(form.email)) {
+      next.email = 'Enter a valid email address'
+    }
     if (form.address.trim().length < 10)
       next.address = 'Please give a full address — house, road and area'
     if (!form.area.trim()) next.area = 'Which area or thana?'
@@ -325,7 +340,7 @@ export default function Checkout() {
    * a browser can be edited, a server-side total cannot.
    */
   const submit = async () => {
-    if (!agreed) {
+    if (termsRequired && !agreed) {
       toast('Please accept the terms to place your order', { kind: 'error' })
       return
     }
@@ -550,31 +565,41 @@ export default function Checkout() {
                     />
                   </Field>
 
-                  <Field label="Alternative number" hint="Optional" error={errors.altPhone}>
-                    <input
-                      value={form.altPhone}
-                      onChange={set('altPhone')}
-                      placeholder="01XXXXXXXXX"
-                      inputMode="tel"
-                      className={inputClass(errors.altPhone)}
-                    />
-                  </Field>
+                  {checkoutForm.altPhone !== 'off' && (
+                    <Field
+                      label="Alternative number"
+                      hint={checkoutForm.altPhone === 'required' ? undefined : 'Optional'}
+                      required={checkoutForm.altPhone === 'required'}
+                      error={errors.altPhone}
+                    >
+                      <input
+                        value={form.altPhone}
+                        onChange={set('altPhone')}
+                        placeholder="01XXXXXXXXX"
+                        inputMode="tel"
+                        className={inputClass(errors.altPhone)}
+                      />
+                    </Field>
+                  )}
 
-                  <Field
-                    label="Email"
-                    hint="Optional — for the receipt"
-                    error={errors.email}
-                    className="sm:col-span-2"
-                  >
-                    <input
-                      value={form.email}
-                      onChange={set('email')}
-                      type="email"
-                      placeholder="you@email.com"
-                      autoComplete="email"
-                      className={inputClass(errors.email)}
-                    />
-                  </Field>
+                  {checkoutForm.email !== 'off' && (
+                    <Field
+                      label="Email"
+                      hint={checkoutForm.email === 'required' ? 'For the receipt' : 'Optional — for the receipt'}
+                      required={checkoutForm.email === 'required'}
+                      error={errors.email}
+                      className="sm:col-span-2"
+                    >
+                      <input
+                        value={form.email}
+                        onChange={set('email')}
+                        type="email"
+                        placeholder="you@email.com"
+                        autoComplete="email"
+                        className={inputClass(errors.email)}
+                      />
+                    </Field>
+                  )}
 
                   <Field label="District" required>
                     <select
@@ -742,60 +767,64 @@ export default function Checkout() {
                 )}
 
                 <div className="mt-8 space-y-5">
-                  <Field label="Delivery notes" hint="Optional">
-                    <textarea
-                      value={form.notes}
-                      onChange={set('notes')}
-                      rows={2}
-                      placeholder="Landmark, preferred delivery time, or anything the courier should know"
-                      className={cx(inputClass(false), 'h-auto resize-none py-3.5')}
-                    />
-                  </Field>
-
-                  <div className="rounded-2xl border border-ink/15 p-5">
-                    <label className="flex cursor-pointer items-center gap-3">
-                      <input
-                        type="checkbox"
-                        checked={form.isGift}
-                        onChange={set('isGift')}
-                        className="sr-only"
+                  {checkoutForm.notes !== false && (
+                    <Field label="Delivery notes" hint="Optional">
+                      <textarea
+                        value={form.notes}
+                        onChange={set('notes')}
+                        rows={2}
+                        placeholder="Landmark, preferred delivery time, or anything the courier should know"
+                        className={cx(inputClass(false), 'h-auto resize-none py-3.5')}
                       />
-                      <span
+                    </Field>
+                  )}
+
+                  {checkoutForm.giftOption !== false && (
+                    <div className="rounded-2xl border border-ink/15 p-5">
+                      <label className="flex cursor-pointer items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={form.isGift}
+                          onChange={set('isGift')}
+                          className="sr-only"
+                        />
+                        <span
+                          className={cx(
+                            'grid h-[1.125rem] w-[1.125rem] shrink-0 place-items-center rounded-[0.3rem] border transition-all',
+                            form.isGift ? 'border-ink bg-ink text-cream' : 'border-ink/25',
+                          )}
+                        >
+                          {form.isGift && <Icon name="check" size={12} strokeWidth={3} />}
+                        </span>
+                        <span className="flex items-center gap-2 text-[0.9375rem] font-medium">
+                          <Icon name="gift" size={17} className="text-plum" />
+                          This is a gift
+                        </span>
+                        <span className="ml-auto text-[0.75rem] text-ink/45">Free wrapping</span>
+                      </label>
+
+                      <div
                         className={cx(
-                          'grid h-[1.125rem] w-[1.125rem] shrink-0 place-items-center rounded-[0.3rem] border transition-all',
-                          form.isGift ? 'border-ink bg-ink text-cream' : 'border-ink/25',
+                          'grid transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)]',
+                          form.isGift ? 'mt-4 grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0',
                         )}
                       >
-                        {form.isGift && <Icon name="check" size={12} strokeWidth={3} />}
-                      </span>
-                      <span className="flex items-center gap-2 text-[0.9375rem] font-medium">
-                        <Icon name="gift" size={17} className="text-plum" />
-                        This is a gift
-                      </span>
-                      <span className="ml-auto text-[0.75rem] text-ink/45">Free wrapping</span>
-                    </label>
-
-                    <div
-                      className={cx(
-                        'grid transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)]',
-                        form.isGift ? 'mt-4 grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0',
-                      )}
-                    >
-                      <div className="overflow-hidden">
-                        <textarea
-                          value={form.giftNote}
-                          onChange={set('giftNote')}
-                          rows={2}
-                          maxLength={200}
-                          placeholder="Write the message we should hand-write on the card…"
-                          className={cx(inputClass(false), 'h-auto resize-none py-3.5')}
-                        />
-                        <p className="mt-1.5 text-right text-[0.6875rem] text-ink/40">
-                          {form.giftNote.length}/200 — the price is hidden on gift orders
-                        </p>
+                        <div className="overflow-hidden">
+                          <textarea
+                            value={form.giftNote}
+                            onChange={set('giftNote')}
+                            rows={2}
+                            maxLength={200}
+                            placeholder="Write the message we should hand-write on the card…"
+                            className={cx(inputClass(false), 'h-auto resize-none py-3.5')}
+                          />
+                          <p className="mt-1.5 text-right text-[0.6875rem] text-ink/40">
+                            {form.giftNote.length}/200 — the price is hidden on gift orders
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
                 </div>
 
                 <div className="mt-9 flex flex-wrap gap-3">
@@ -969,33 +998,47 @@ export default function Checkout() {
                   </p>
                 </div>
 
-                <label className="mt-6 flex cursor-pointer items-start gap-3">
-                  <input
-                    type="checkbox"
-                    checked={agreed}
-                    onChange={(e) => setAgreed(e.target.checked)}
-                    className="sr-only"
-                  />
-                  <span
-                    className={cx(
-                      'mt-0.5 grid h-[1.125rem] w-[1.125rem] shrink-0 place-items-center rounded-[0.3rem] border transition-all',
-                      agreed ? 'border-ink bg-ink text-cream' : 'border-ink/25',
-                    )}
-                  >
-                    {agreed && <Icon name="check" size={12} strokeWidth={3} />}
-                  </span>
-                  <span className="text-[0.8125rem] leading-relaxed text-ink/65">
-                    I agree to the{' '}
+                {termsRequired ? (
+                  <label className="mt-6 flex cursor-pointer items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={agreed}
+                      onChange={(e) => setAgreed(e.target.checked)}
+                      className="sr-only"
+                    />
+                    <span
+                      className={cx(
+                        'mt-0.5 grid h-[1.125rem] w-[1.125rem] shrink-0 place-items-center rounded-[0.3rem] border transition-all',
+                        agreed ? 'border-ink bg-ink text-cream' : 'border-ink/25',
+                      )}
+                    >
+                      {agreed && <Icon name="check" size={12} strokeWidth={3} />}
+                    </span>
+                    <span className="text-[0.8125rem] leading-relaxed text-ink/65">
+                      {checkoutForm.termsLabel}{' '}
+                      <Link to="/policy/terms" className="underline underline-offset-2 hover:text-plum">
+                        Terms
+                      </Link>{' '}
+                      ·{' '}
+                      <Link to="/policy/returns" className="underline underline-offset-2 hover:text-plum">
+                        Returns
+                      </Link>
+                    </span>
+                  </label>
+                ) : (
+                  /* The tick is off, so the policies are linked rather than agreed to. */
+                  <p className="mt-6 text-[0.8125rem] leading-relaxed text-ink/50">
+                    By placing this order you accept our{' '}
                     <Link to="/policy/terms" className="underline underline-offset-2 hover:text-plum">
-                      terms of service
+                      terms
                     </Link>{' '}
-                    and the{' '}
+                    and{' '}
                     <Link to="/policy/returns" className="underline underline-offset-2 hover:text-plum">
                       return policy
                     </Link>
-                    . I confirm the delivery details above are correct.
-                  </span>
-                </label>
+                    .
+                  </p>
+                )}
 
                 <div className="mt-8 flex flex-wrap items-center gap-3">
                   <Button size="lg" onClick={submit} loading={submitting} disabled={submitting}>

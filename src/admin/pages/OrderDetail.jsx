@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { adminApi } from '@/lib/api'
+import { adminApi, API_BASE } from '@/lib/api'
 import {
   AdminPage, Badge, Btn, Card, Field, Input, Modal, ORDER_TONE, PAYMENT_TONE,
   Select, Spinner, Textarea, Toggle, useToasts,
@@ -404,7 +404,7 @@ export default function OrderDetail() {
             <div className="mt-4 flex flex-wrap gap-2">
               <Btn
                 as="a"
-                href={`/api/orders/${order.orderNumber}/invoice`}
+                href={`${API_BASE}/orders/${order.orderNumber}/invoice`}
                 target="_blank"
                 rel="noopener noreferrer"
                 size="sm"
@@ -413,7 +413,7 @@ export default function OrderDetail() {
               </Btn>
               <Btn
                 as="a"
-                href={`/api/orders/${order.orderNumber}/invoice?print=1`}
+                href={`${API_BASE}/orders/${order.orderNumber}/invoice?print=1`}
                 target="_blank"
                 rel="noopener noreferrer"
                 variant="primary"

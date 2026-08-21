@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { adminApi } from '@/lib/api'
 import { Badge, Btn, Modal, Spinner } from './ui'
 import { Icon } from '@/components/ui/Icon'
-import { cx } from '@/utils/format'
+import { cx, optimisationSummary } from '@/utils/format'
 
 /* ------------------------------ media picker ------------------------------ */
 
@@ -10,6 +10,7 @@ export function MediaPicker({ open, onClose, onSelect, multiple = true }) {
   const [media, setMedia] = useState(null)
   const [picked, setPicked] = useState([])
   const [uploading, setUploading] = useState(false)
+  const [savings, setSavings] = useState('')
   const inputRef = useRef(null)
 
   const load = useCallback(async () => {
@@ -154,6 +155,7 @@ export function ImageManager({ value = [], onChange, alt = '' }) {
       Array.from(files).forEach((f) => fd.append('files', f))
       const res = await adminApi.upload('/media', fd)
       append(res.media.map((m) => m.url))
+      setSavings(optimisationSummary(res.optimisation))
     } catch (err) {
       setError(err.message)
     } finally {
@@ -257,6 +259,12 @@ export function ImageManager({ value = [], onChange, alt = '' }) {
       {error && (
         <p className="mt-2 flex items-center gap-1.5 text-[0.75rem] text-red-600">
           <Icon name="alert" size={13} /> {error}
+        </p>
+      )}
+
+      {savings && !error && (
+        <p className="mt-2 flex items-center gap-1.5 text-[0.75rem] text-moss">
+          <Icon name="checkCircle" size={13} /> Optimised — {savings}
         </p>
       )}
 

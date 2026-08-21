@@ -252,6 +252,36 @@ const settingsSchema = new mongoose.Schema(
       },
     },
 
+    /**
+     * Which fields the checkout asks for. Every shop wants a different amount
+     * of friction here — one takes orders on WhatsApp and needs nothing but a
+     * number, another sends invoices and wants email compulsory. Rather than a
+     * bare on/off, the optional fields carry three states so a shop can make a
+     * field mandatory without a code change.
+     */
+    checkout: {
+      altPhone: { type: String, enum: ['off', 'optional', 'required'], default: 'optional' },
+      email: { type: String, enum: ['off', 'optional', 'required'], default: 'optional' },
+      notes: { type: Boolean, default: true },
+      giftOption: { type: Boolean, default: true },
+      requireTerms: { type: Boolean, default: true },
+      termsLabel: {
+        type: String,
+        default: 'I agree to the terms of service and the return policy.',
+      },
+    },
+
+    /**
+     * How uploaded images are re-encoded. WebP is the default because it is
+     * universally supported and cheap to encode; AVIF files are smaller again
+     * but cost several times the CPU per image, which is felt on a one-core VPS.
+     */
+    media: {
+      format: { type: String, enum: ['webp', 'avif', 'original'], default: 'webp' },
+      quality: { type: Number, default: 78, min: 40, max: 100 },
+      maxWidth: { type: Number, default: 2000, min: 600, max: 4000 },
+    },
+
     storefront: {
       language: { type: String, enum: ['en', 'bn'], default: 'en' },
       allowLanguageToggle: { type: Boolean, default: true },

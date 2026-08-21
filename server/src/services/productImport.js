@@ -316,7 +316,8 @@ export function buildProduct(row, { categorySlugs }) {
     videos,
     colors: asColors(row.colors),
     sizes: asSizes(row.sizes),
-    stock: asNumber(row.stock) ?? 0,
+    // Inventory is counted in whole units, whatever the spreadsheet says.
+    stock: Math.max(0, Math.round(asNumber(row.stock) ?? 0)),
     lowStockThreshold: asNumber(row.lowStockThreshold) ?? 5,
     trackInventory: asBoolean(row.trackInventory, true),
     badge: asString(row.badge),

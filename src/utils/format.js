@@ -40,3 +40,23 @@ export const slugifyClient = (str) =>
     .trim()
     .replace(/[\s_-]+/g, '-')
     .replace(/^-+|-+$/g, '')
+
+/** 1536 → "1.5 KB", 5417216 → "5.2 MB" */
+export const fileSize = (bytes) => {
+  const n = Number(bytes) || 0
+  if (n < 1024) return `${n} B`
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`
+  return `${(n / 1024 / 1024).toFixed(1)} MB`
+}
+
+/**
+ * "5.2 MB → 103 KB · 98% smaller" — the sentence an admin actually wants after
+ * uploading, rather than a bare "uploaded" with no idea what happened to it.
+ */
+export const optimisationSummary = (o) => {
+  if (!o || !o.originalBytes) return ''
+  const from = fileSize(o.originalBytes)
+  const to = fileSize(o.storedBytes)
+  if (!o.savedPercent || o.savedPercent <= 0) return `${to} stored`
+  return `${from} → ${to} · ${o.savedPercent}% smaller`
+}

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { optimisationSummary } from '@/utils/format'
 import { adminApi } from '@/lib/api'
 import { AdminPage, Btn, Card, ConfirmDialog, EmptyRow, Spinner, useToasts } from '../components/ui'
 import { Icon } from '@/components/ui/Icon'
@@ -30,7 +31,11 @@ export default function Media() {
       const fd = new FormData()
       Array.from(files).forEach((f) => fd.append('files', f))
       const res = await adminApi.upload('/media', fd)
-      push(`${res.media.length} file${res.media.length > 1 ? 's' : ''} uploaded`)
+      const summary = optimisationSummary(res.optimisation)
+      push(
+        `${res.media.length} file${res.media.length > 1 ? 's' : ''} uploaded` +
+          (summary ? ` — ${summary}` : ''),
+      )
       load()
     } catch (err) {
       push(err.message, 'error')

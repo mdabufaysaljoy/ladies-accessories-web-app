@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import rateLimit from 'express-rate-limit'
 import { asyncHandler } from '../utils/helpers.js'
+import { Visit } from '../models/Visit.js'
 import { requireAuth, requireAbility } from '../middleware/auth.js'
 import { optionalCustomer } from '../middleware/customerAuth.js'
 import {
@@ -95,6 +96,83 @@ router.post(
 
     const result = await sendEvents(event, { config: cfg })
     res.json({ ok: result.ok, simulated: result.simulated ?? false })
+  }),
+)
+
+/**
+ * POST /api/track/visit — first-party page view.
+ *
+ * Separate from `/event` on purpose: this one always records, whether or not
+ * the shop has configured a Meta or Google pixel, because the dashboard's
+ * visitor count should not depend on a third-party marketing tool being set up.
+ *
+ * Everything stored is derived here rather than trusted: the referrer is
+ * reduced to a host, the device is read from the user agent, and the session id
+ * is length-capped. No IP address is written.
+ */
+const visitLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  // A fast browser can legitimately produce a burst of route changes.
+  limit: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  // Counting is best-effort; never fail a shopper's page for it.
+  handler: (_req, res) => res.status(204).end(),
+})
+
+/** `https://m.facebook.com/foo?x=1` → `facebook.com`. Never the full URL. */
+function referrerSource(referrer, selfHost) {
+  if (!referrer) return 'direct'
+  try {
+    const host = new URL(referrer).hostname.replace(/^(www|m|l)\./, '').toLowerCase()
+    if (!host || host === selfHost) return 'direct'
+    if (host.includes('facebook') || host.includes('fb.')) return 'facebook'
+    if (host.includes('instagram')) return 'instagram'
+    if (host.includes('google')) return 'google'
+    if (host.includes('tiktok')) return 'tiktok'
+    if (host.includes('youtube')) return 'youtube'
+    if (host.includes('whatsapp')) return 'whatsapp'
+    return host.slice(0, 60)
+  } catch {
+    return 'direct'
+  }
+}
+
+const deviceFrom = (ua = '') => {
+  if (/iPad|Tablet|PlayBook|Silk/i.test(ua)) return 'tablet'
+  if (/Mobi|Android|iPhone|iPod/i.test(ua)) return 'mobile'
+  return 'desktop'
+}
+
+router.post(
+  '/visit',
+  visitLimiter,
+  asyncHandler(async (req, res) => {
+    const { sessionId, path, referrer, isEntry } = req.body ?? {}
+
+    // Respond first: the browser has nothing to wait for, and a slow write
+    // must never hold up a page transition.
+    res.status(204).end()
+
+    if (!sessionId || typeof sessionId !== 'string' || !path || typeof path !== 'string') return
+    // Staff traffic would drown out real customers in the numbers.
+    if (path.startsWith('/admin')) return
+
+    try {
+      const selfHost = (req.headers.origin ? new URL(req.headers.origin).hostname : '')
+        .replace(/^(www|m)\./, '')
+        .toLowerCase()
+
+      await Visit.create({
+        sessionId: sessionId.slice(0, 64),
+        path: path.split('?')[0].slice(0, 200),
+        isEntry: Boolean(isEntry),
+        source: referrerSource(referrer, selfHost),
+        device: deviceFrom(req.get('user-agent')),
+      })
+    } catch (error) {
+      console.error('[visit] could not record:', error.message)
+    }
   }),
 )
 

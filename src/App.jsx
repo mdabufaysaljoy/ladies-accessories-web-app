@@ -13,7 +13,7 @@ const Shop = lazy(() => import('@/pages/Shop'))
 const ProductDetail = lazy(() => import('@/pages/ProductDetail'))
 const Cart = lazy(() => import('@/pages/Cart'))
 const Checkout = lazy(() => import('@/pages/Checkout'))
-const PaymentGateway = lazy(() => import('@/pages/PaymentGateway'))
+const PaymentFailed = lazy(() => import('@/pages/PaymentFailed'))
 const OrderConfirmation = lazy(() => import('@/pages/OrderConfirmation'))
 const TrackOrder = lazy(() => import('@/pages/TrackOrder'))
 const Reviews = lazy(() => import('@/pages/Reviews'))
@@ -50,7 +50,8 @@ export default function App() {
         {/* Checkout and the gateway run without storefront nav — fewer exits. */}
         <Route element={<CheckoutLayout />}>
           <Route path="checkout" element={<Checkout />} />
-          <Route path="payment/sslcommerz" element={<PaymentGateway />} />
+          {/* Where the API sends a shopper when a card or wallet is declined. */}
+          <Route path="payment/failed" element={<PaymentFailed />} />
         </Route>
 
         <Route element={<Layout />}>

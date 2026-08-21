@@ -266,6 +266,76 @@ export function track(eventName, customData = {}, { eventId } = {}) {
   return id
 }
 
+/* ----------------------------- first-party ------------------------------ */
+
+const VISIT_KEY = 'gbs.sid'
+
+/**
+ * A per-tab id used only to group page views into one visit. It lives in
+ * sessionStorage, so it disappears when the tab closes and never identifies a
+ * person across visits — which is all the dashboard's visitor count needs.
+ */
+function sessionId() {
+  try {
+    let id = sessionStorage.getItem(VISIT_KEY)
+    if (!id) {
+      id = (crypto.randomUUID?.() ?? `s-${Date.now()}-${Math.random().toString(36).slice(2)}`)
+      sessionStorage.setItem(VISIT_KEY, id)
+      return { id, isEntry: true }
+    }
+    return { id, isEntry: false }
+  } catch {
+    // Private mode with storage disabled: still count the view, as its own visit.
+    return { id: `anon-${Date.now()}`, isEntry: true }
+  }
+}
+
+/**
+ * Records a page view on our own server. Runs regardless of whether any
+ * marketing pixel is configured — the shop's own visitor count should not
+ * depend on a Meta or Google account existing.
+ */
+let lastVisit = { path: null, at: 0 }
+
+export function recordVisit(path) {
+  if (!isBrowser() || path.startsWith('/admin')) return
+
+  /**
+   * Drop an immediate repeat of the same path. React's StrictMode invokes
+   * effects twice in development, and a remount or a fast back/forward can do
+   * the same in production — either way it is one page view, not two, and an
+   * inflated count is worse than no count.
+   */
+  const now = Date.now()
+  if (lastVisit.path === path && now - lastVisit.at < 2000) return
+  lastVisit = { path, at: now }
+
+  try {
+    const { id, isEntry } = sessionId()
+    const body = JSON.stringify({
+      sessionId: id,
+      path,
+      // Only sent on the first view; after that the referrer is our own page.
+      referrer: isEntry ? document.referrer : '',
+      isEntry,
+    })
+    const url = `${API_BASE}/track/visit`
+
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon(url, new Blob([body], { type: 'application/json' }))
+      return
+    }
+    fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+      keepalive: true,
+    }).catch(() => {})
+  } catch {
+    /* counting a visit must never break the page */
+  }
+}
+
 /** SPA route change — GA4 and the pixel both need to be told explicitly. */
 export function trackPageView(path) {
   if (!isBrowser() || !config) return

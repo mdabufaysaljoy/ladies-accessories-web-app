@@ -236,7 +236,14 @@ async function seed() {
     })
     await owner.setPassword(process.env.SEED_ADMIN_PASSWORD ?? 'ChangeMe123!')
     await owner.save()
-    console.log(`[seed] owner created → ${email} / ${process.env.SEED_ADMIN_PASSWORD ?? 'ChangeMe123!'}`)
+    // Never print the password itself: on a server this line goes straight
+    // into the PM2 log file, where it outlives the terminal it was typed in.
+    console.log(
+      `[seed] owner created → ${email}` +
+        (process.env.SEED_ADMIN_PASSWORD
+          ? ' (password taken from SEED_ADMIN_PASSWORD)'
+          : ' / ChangeMe123!  ← default password, change it at first sign-in'),
+    )
   }
 
   /* ------------------------------ categories ----------------------------- */

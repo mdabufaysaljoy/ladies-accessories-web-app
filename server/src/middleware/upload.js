@@ -1,25 +1,32 @@
 import multer from 'multer'
-import path from 'node:path'
 import fs from 'node:fs'
-import crypto from 'node:crypto'
 import { env } from '../config/env.js'
 import { ApiError } from '../utils/helpers.js'
 
 fs.mkdirSync(env.uploadDir, { recursive: true })
 
-const ALLOWED = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/svg+xml'])
+/**
+ * What a phone or laptop might hand us. Everything except SVG is re-encoded,
+ * so the list can be permissive about the input format — HEIC is what an
+ * iPhone produces by default and used to be rejected outright.
+ */
+const ALLOWED = new Set([
+  'image/jpeg', 'image/png', 'image/webp', 'image/avif',
+  'image/gif', 'image/heic', 'image/heif', 'image/tiff',
+  'image/svg+xml',
+])
 
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, env.uploadDir),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase().slice(0, 10)
-    cb(null, `${Date.now()}-${crypto.randomBytes(6).toString('hex')}${ext}`)
-  },
-})
-
+/**
+ * Images are held in memory rather than written straight to disk: every one is
+ * re-encoded by `services/imageOptimiser` before it is stored, so the original
+ * camera file should never land in the uploads directory at all.
+ *
+ * The size limit is generous because it applies to what the phone sends, not
+ * to what is kept — a 9 MB photo routinely comes out under 200 KB.
+ */
 export const upload = multer({
-  storage,
-  limits: { fileSize: 5 * 1024 * 1024, files: 10 },
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 12 * 1024 * 1024, files: 10 },
   fileFilter: (_req, file, cb) => {
     if (!ALLOWED.has(file.mimetype)) {
       return cb(ApiError.badRequest(`Unsupported file type: ${file.mimetype}`))

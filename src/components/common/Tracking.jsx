@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useSettings } from '@/context/SettingsContext'
-import { initTracking, trackPageView } from '@/lib/tracking'
+import { initTracking, recordVisit, trackPageView } from '@/lib/tracking'
 
 /**
  * Boots the marketing pixels once the admin's settings arrive, then reports a
@@ -31,11 +31,17 @@ export function Tracking() {
   }, [loading, analytics])
 
   useEffect(() => {
-    if (!started.current) return
     // The shop's own analytics already cover the admin panel; it is staff
     // traffic and would pollute the ad audiences.
     if (pathname.startsWith('/admin')) return
-    trackPageView(pathname + search)
+
+    /**
+     * The first-party visit is recorded on every route change regardless of
+     * pixel configuration — unlike `trackPageView`, which is a no-op until the
+     * shop has entered a Meta or Google ID.
+     */
+    recordVisit(pathname)
+    if (started.current) trackPageView(pathname + search)
   }, [pathname, search])
 
   return null

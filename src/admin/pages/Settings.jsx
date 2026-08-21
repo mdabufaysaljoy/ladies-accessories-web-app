@@ -12,6 +12,7 @@ const TABS = [
   { id: 'brand', label: 'Brand identity' },
   { id: 'contact', label: 'Contact & social' },
   { id: 'storefront', label: 'Storefront' },
+  { id: 'checkout', label: 'Checkout form' },
   { id: 'delivery', label: 'Delivery' },
   { id: 'couriers', label: 'Couriers' },
   { id: 'payments', label: 'Payments' },
@@ -448,6 +449,179 @@ export default function SettingsPage() {
                 <Field label="Meta description">
                   <Textarea rows={3} value={data.seo?.metaDescription ?? ''} onChange={(e) => set('seo', { metaDescription: e.target.value })} />
                 </Field>
+              </div>
+            </Card>
+
+            <Card
+              title="Image optimisation"
+              description="Applied to every image uploaded from now on"
+            >
+              <div className="space-y-4">
+                <Field label="Stored format" hint="WebP is the safe default">
+                  <Select
+                    value={data.media?.format ?? 'webp'}
+                    onChange={(e) => set('media', { format: e.target.value })}
+                  >
+                    <option value="webp">WebP — smaller, works everywhere</option>
+                    <option value="avif">AVIF — smallest, slower to process</option>
+                    <option value="original">Keep original — no optimisation</option>
+                  </Select>
+                </Field>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label={`Quality (${data.media?.quality ?? 78})`} hint="78 is visually lossless for photos">
+                    <Input
+                      type="range"
+                      min={40}
+                      max={100}
+                      value={data.media?.quality ?? 78}
+                      onChange={(e) => set('media', { quality: Number(e.target.value) })}
+                    />
+                  </Field>
+                  <Field label="Maximum width" hint="Longest edge, in pixels">
+                    <Input
+                      type="number"
+                      min={600}
+                      max={4000}
+                      value={data.media?.maxWidth ?? 2000}
+                      onChange={(e) => set('media', { maxWidth: Number(e.target.value) })}
+                    />
+                  </Field>
+                </div>
+
+                <div className="rounded-xl bg-blush px-4 py-3 text-[0.8125rem] leading-relaxed text-ink/70">
+                  <Icon name="info" size={14} className="mr-1.5 inline text-plum" />
+                  A photo straight from a phone is typically 4–6 MB; stored as WebP it comes out
+                  around 100 KB — the single biggest thing you can do for page speed on mobile
+                  data. Camera location data is stripped at the same time. Images already uploaded
+                  are left as they are.
+                </div>
+              </div>
+            </Card>
+          </div>
+        </div>
+      )}
+
+      {/* ----------------------------- checkout ---------------------------- */}
+      {tab === 'checkout' && (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Card
+            title="Optional fields"
+            description="Switch a field off to remove it from the checkout entirely"
+          >
+            <div className="space-y-5">
+              <div className="rounded-xl border border-ink/10 p-4">
+                <Toggle
+                  checked={(data.checkout?.altPhone ?? 'optional') !== 'off'}
+                  onChange={(v) => set('checkout', { altPhone: v ? 'optional' : 'off' })}
+                  label="Alternative phone number"
+                />
+                <p className="mt-2 text-[0.75rem] leading-relaxed text-ink/55">
+                  A second number to try when the courier cannot reach the first.
+                </p>
+                {(data.checkout?.altPhone ?? 'optional') !== 'off' && (
+                  <div className="mt-3 border-t border-ink/8 pt-3">
+                    <Toggle
+                      checked={data.checkout?.altPhone === 'required'}
+                      onChange={(v) => set('checkout', { altPhone: v ? 'required' : 'optional' })}
+                      label="Make it compulsory"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-xl border border-ink/10 p-4">
+                <Toggle
+                  checked={(data.checkout?.email ?? 'optional') !== 'off'}
+                  onChange={(v) => set('checkout', { email: v ? 'optional' : 'off' })}
+                  label="Email address"
+                />
+                <p className="mt-2 text-[0.75rem] leading-relaxed text-ink/55">
+                  Order confirmation and invoice emails need one. Switch it off and customers get
+                  updates by phone only.
+                </p>
+                {(data.checkout?.email ?? 'optional') !== 'off' && (
+                  <div className="mt-3 border-t border-ink/8 pt-3">
+                    <Toggle
+                      checked={data.checkout?.email === 'required'}
+                      onChange={(v) => set('checkout', { email: v ? 'required' : 'optional' })}
+                      label="Make it compulsory"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-xl border border-ink/10 p-4">
+                <Toggle
+                  checked={data.checkout?.giftOption !== false}
+                  onChange={(v) => set('checkout', { giftOption: v })}
+                  label="“This is a gift” option"
+                />
+                <p className="mt-2 text-[0.75rem] leading-relaxed text-ink/55">
+                  Lets a shopper add a gift note. The price is hidden on the delivery slip for gift
+                  orders.
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-ink/10 p-4">
+                <Toggle
+                  checked={data.checkout?.notes !== false}
+                  onChange={(v) => set('checkout', { notes: v })}
+                  label="Delivery notes box"
+                />
+                <p className="mt-2 text-[0.75rem] leading-relaxed text-ink/55">
+                  A free-text box for landmarks or a preferred delivery time.
+                </p>
+              </div>
+            </div>
+          </Card>
+
+          <div className="space-y-4">
+            <Card title="Terms & conditions" description="The tick box on the payment step">
+              <div className="rounded-xl border border-ink/10 p-4">
+                <Toggle
+                  checked={data.checkout?.requireTerms !== false}
+                  onChange={(v) => set('checkout', { requireTerms: v })}
+                  label="“I agree to the terms of service” tick box"
+                />
+                <p className="mt-2 text-[0.75rem] leading-relaxed text-ink/55">
+                  When it is on, the order cannot be placed until the shopper ticks it.
+                </p>
+              </div>
+
+              {data.checkout?.requireTerms !== false && (
+                <Field
+                  label="Wording"
+                  hint="Links to your terms and returns pages are added after it"
+                  className="mt-4"
+                >
+                  <Input
+                    value={data.checkout?.termsLabel ?? ''}
+                    onChange={(e) => set('checkout', { termsLabel: e.target.value })}
+                    placeholder="I agree to the terms of service and the return policy."
+                  />
+                </Field>
+              )}
+
+              {data.checkout?.requireTerms === false && (
+                <p className="mt-4 rounded-xl bg-gold/10 px-4 py-3 text-[0.8125rem] leading-relaxed text-ink/70">
+                  <Icon name="alert" size={14} className="mr-1.5 inline text-gold" />
+                  With the tick box off, the checkout tells shoppers that placing the order accepts
+                  your terms and return policy. Keeping an explicit tick is the safer record if a
+                  customer ever disputes a return.
+                </p>
+              )}
+            </Card>
+
+            <Card title="Always asked for">
+              <p className="text-[0.8125rem] leading-relaxed text-ink/60">
+                Full name, mobile number, district, area and full address cannot be switched off —
+                a courier cannot deliver an order without them.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {['Full name', 'Mobile number', 'District', 'Area / Thana', 'Full address'].map((f) => (
+                  <Badge key={f} tone="neutral">{f}</Badge>
+                ))}
               </div>
             </Card>
           </div>

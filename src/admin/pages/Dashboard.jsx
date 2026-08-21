@@ -109,7 +109,7 @@ export default function Dashboard() {
   if (loading && !data) return <Spinner className="min-h-[60vh]" />
   if (!data) return null
 
-  const { totals, change, statusCounts, paymentSplit, topProducts, lowStock, recentOrders, series } = data
+  const { totals, change, statusCounts, paymentSplit, topProducts, lowStock, recentOrders, series, traffic } = data
   const totalPayments = paymentSplit.reduce((s, p) => s + p.count, 0) || 1
 
   return (
@@ -137,7 +137,26 @@ export default function Dashboard() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat label="Revenue" value={taka(totals.revenue)} change={change.revenue} icon="cash" tone="success" />
         <Stat label="Orders" value={totals.orders} change={change.orders} icon="bag" to="/admin/orders" />
+        <Stat
+          label="Visitors"
+          value={(totals.visitors ?? 0).toLocaleString('en-US')}
+          change={change.visitors}
+          icon="eye"
+        />
         <Stat label="Avg order value" value={taka(totals.avgOrderValue)} icon="sparkle" />
+      </div>
+
+      {/* Traffic, and what it converts to — the number the shop is really run on. */}
+      <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Stat label="Visitors today" value={(totals.visitorsToday ?? 0).toLocaleString('en-US')} icon="user" />
+        <Stat label="Page views" value={(totals.pageViews ?? 0).toLocaleString('en-US')} icon="grid" />
+        <Stat
+          label="Conversion rate"
+          // Held back until the visitor sample is large enough to mean anything.
+          value={data.conversionRate == null ? '—' : `${data.conversionRate}%`}
+          icon="checkCircle"
+          tone={data.conversionRate >= 1 ? 'success' : 'neutral'}
+        />
         <Stat
           label="Unread messages"
           value={totals.unreadChats}
@@ -146,6 +165,60 @@ export default function Dashboard() {
           to="/admin/inbox"
         />
       </div>
+
+      {traffic && traffic.visitors > 0 && (
+        <div className="mt-4 grid gap-4 lg:grid-cols-3">
+          <Card title="Where visitors come from">
+            {traffic.sources.length === 0 ? (
+              <p className="text-[0.8125rem] text-ink/45">No entry pages recorded yet.</p>
+            ) : (
+              <ul className="space-y-2.5">
+                {traffic.sources.map((s) => {
+                  const pct = Math.round((s.visits / traffic.sources.reduce((a, b) => a + b.visits, 0)) * 100)
+                  return (
+                    <li key={s.source} className="flex items-center gap-3 text-[0.8125rem]">
+                      <span className="w-20 shrink-0 truncate capitalize text-ink/70">{s.source}</span>
+                      <span className="h-2 flex-1 overflow-hidden rounded-full bg-ink/8">
+                        <span className="block h-full rounded-full bg-plum" style={{ width: `${pct}%` }} />
+                      </span>
+                      <span className="w-12 shrink-0 text-right text-ink/45">{s.visits}</span>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </Card>
+
+          <Card title="Most viewed pages">
+            <ul className="space-y-2">
+              {traffic.topPages.map((p) => (
+                <li key={p.path} className="flex items-center justify-between gap-3 text-[0.8125rem]">
+                  <span className="truncate text-ink/70">{p.path}</span>
+                  <span className="shrink-0 font-medium">{p.views}</span>
+                </li>
+              ))}
+            </ul>
+          </Card>
+
+          <Card title="Devices" description={`${traffic.viewsPerVisitor} pages per visitor`}>
+            <ul className="space-y-2.5">
+              {['mobile', 'desktop', 'tablet'].map((d) => {
+                const n = traffic.devices?.[d] ?? 0
+                const total = Object.values(traffic.devices ?? {}).reduce((a, b) => a + b, 0) || 1
+                return (
+                  <li key={d} className="flex items-center gap-3 text-[0.8125rem]">
+                    <span className="w-20 shrink-0 capitalize text-ink/70">{d}</span>
+                    <span className="h-2 flex-1 overflow-hidden rounded-full bg-ink/8">
+                      <span className="block h-full rounded-full bg-moss" style={{ width: `${Math.round((n / total) * 100)}%` }} />
+                    </span>
+                    <span className="w-12 shrink-0 text-right text-ink/45">{n}</span>
+                  </li>
+                )
+              })}
+            </ul>
+          </Card>
+        </div>
+      )}
 
       <div className="mt-4 grid gap-4 lg:grid-cols-[1.6fr_1fr]">
         <Card title="Revenue trend" description={`Daily totals, last ${days} days`}>

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button'
 import { Icon } from '@/components/ui/Icon'
 import { PageHeader, usePageMeta } from '@/components/common/PageShell'
 import { useAccount, request } from '@/context/AccountContext'
+import { API_BASE } from '@/lib/api'
 import { useSettings } from '@/context/SettingsContext'
 import { MyReviews } from '@/components/review/MyReviews'
 import { DISTRICTS } from '@/data/content'
@@ -320,7 +321,7 @@ export default function Account() {
                         <span className="font-display text-lg">{taka(o.totals.total)}</span>
                         <div className="flex gap-2">
                           <Button
-                            href={`/api/orders/${o.orderNumber}/invoice?phone=${encodeURIComponent(customer.phone)}`}
+                            href={`${API_BASE}/orders/${o.orderNumber}/invoice?phone=${encodeURIComponent(customer.phone)}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             variant="outline"

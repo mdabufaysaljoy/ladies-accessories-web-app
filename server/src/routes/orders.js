@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import rateLimit from 'express-rate-limit'
 import mongoose from 'mongoose'
 import { Order, ORDER_STATUSES } from '../models/Order.js'
 import { Product } from '../models/Product.js'
@@ -42,7 +43,15 @@ export async function buildOrderTotals({ lines, zoneId, couponCode }) {
     if (!product) throw ApiError.badRequest(`A product in your bag is no longer available`)
     if (product.status !== 'active') throw ApiError.badRequest(`“${product.name}” is no longer available`)
 
-    const qty = Math.max(1, Number(line.qty) || 1)
+    /**
+     * Quantities are whole units. `Math.max(1, …)` alone clamped the lower
+     * bound but let a fractional value through, which priced a line at half an
+     * item and left the product's stock at a value like 31.5 that inventory
+     * can never reconcile. Floor first, then clamp, and cap the upper end so a
+     * single line cannot be used to drive a stock counter around.
+     */
+    const requested = Math.floor(Number(line.qty))
+    const qty = Number.isFinite(requested) && requested > 0 ? Math.min(requested, 999) : 1
     if (product.trackInventory && product.stock < qty) {
       throw ApiError.badRequest(
         product.stock === 0
@@ -115,10 +124,31 @@ export async function buildOrderTotals({ lines, zoneId, couponCode }) {
   }
 }
 
+
+/**
+ * Placing an order is the one public write that costs real money: it reserves
+ * stock, triggers a courier consignment and sends email. Without a limit a
+ * script can flood a COD shop with fake orders and empty its inventory on
+ * paper.
+ *
+ * The ceiling is deliberately generous. Bangladeshi mobile networks put large
+ * numbers of real customers behind the same carrier-grade NAT address, so a
+ * tight per-IP limit would block genuine shoppers; this only catches scripted
+ * volume. Repeat COD refusers are handled separately by `riskFlag`.
+ */
+const placeOrderLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many orders from this connection. Please try again shortly, or message us on WhatsApp.' },
+})
+
 /* ------------------------------ public: place ---------------------------- */
 
 router.post(
   '/',
+  placeOrderLimiter,
   optionalCustomer,
   asyncHandler(async (req, res) => {
     const { customer = {}, lines = [], zoneId, couponCode, payment = {}, source = 'web', saveAddress, tracking = {} } = req.body ?? {}
@@ -142,6 +172,27 @@ router.post(
     const { lines: resolvedLines, zone, coupon, totals, settings } = await buildOrderTotals({
       lines, zoneId, couponCode,
     })
+
+    /**
+     * The checkout form is admin-configurable, so the same rules are enforced
+     * here rather than trusted to the browser: a field the shop marked
+     * required must actually arrive, and one they switched off is discarded
+     * rather than accepted from a hand-made request.
+     */
+    const formRules = settings.checkout ?? {}
+
+    if (formRules.email === 'required' && !String(customer.email ?? '').trim()) {
+      throw ApiError.badRequest('Please enter your email address')
+    }
+    if (customer.email && !/.+@.+\..+/.test(String(customer.email).trim())) {
+      throw ApiError.badRequest('Enter a valid email address')
+    }
+    if (formRules.altPhone === 'required' && !String(customer.altPhone ?? '').trim()) {
+      throw ApiError.badRequest('Please add a second number we can reach you on')
+    }
+    if (customer.altPhone && !isValidBdPhone(customer.altPhone)) {
+      throw ApiError.badRequest('That alternative number does not look right')
+    }
 
     const method = payment.method ?? 'cod'
     const allowed = {
@@ -176,14 +227,16 @@ router.post(
       customer: {
         name: String(customer.name).trim(),
         phone,
-        altPhone: customer.altPhone ? normalizeBdPhone(customer.altPhone) : '',
-        email: customer.email?.trim() ?? '',
+        altPhone:
+          formRules.altPhone !== 'off' && customer.altPhone ? normalizeBdPhone(customer.altPhone) : '',
+        email: formRules.email !== 'off' ? (customer.email?.trim() ?? '') : '',
         district: customer.district ?? '',
         area: customer.area ?? '',
         address: String(customer.address).trim(),
-        notes: customer.notes ?? '',
-        isGift: Boolean(customer.isGift),
-        giftNote: customer.giftNote ?? '',
+        notes: formRules.notes !== false ? String(customer.notes ?? '').slice(0, 500) : '',
+        isGift: formRules.giftOption !== false && Boolean(customer.isGift),
+        giftNote:
+          formRules.giftOption !== false ? String(customer.giftNote ?? '').slice(0, 200) : '',
       },
       lines: resolvedLines,
       delivery: { zoneId: zone.id, zoneLabel: zone.label, eta: zone.eta, charge: totals.shipping },

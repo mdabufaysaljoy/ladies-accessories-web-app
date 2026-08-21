@@ -7,7 +7,7 @@ import { PageHeader, usePageMeta } from '@/components/common/PageShell'
 import { useWhatsAppLink } from '@/context/SettingsContext'
 import { useAccount } from '@/context/AccountContext'
 import { useStore } from '@/context/StoreContext'
-import { api } from '@/lib/api'
+import { api, API_BASE } from '@/lib/api'
 import { cx, formatDate, taka } from '@/utils/format'
 
 /** The happy path, in order. A cancelled/returned order leaves this track. */
@@ -286,7 +286,7 @@ export default function TrackOrder() {
                 </dl>
 
                 <Button
-                  href={`/api/orders/${result.orderNumber}/invoice?phone=${encodeURIComponent(phone.trim())}`}
+                  href={`${API_BASE}/orders/${result.orderNumber}/invoice?phone=${encodeURIComponent(phone.trim())}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   variant="outline"

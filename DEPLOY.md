@@ -286,8 +286,25 @@ npm ci --omit=dev
 npm run seed
 ```
 
-You should see `[seed] owner created → you@yourdomain.com / ...` — that
-confirms Mongo auth and the connection string both work.
+You should see `[seed] owner created → you@yourdomain.com` — that confirms
+Mongo auth and the connection string both work. (The password is not printed;
+it is whatever you set as `SEED_ADMIN_PASSWORD`, or `ChangeMe123!` if you left
+it unset — change it at first sign-in.)
+
+> **`sharp` is a native module.** It is what re-encodes every uploaded image to
+> WebP, and `npm ci` pulls a prebuilt binary for linux-x64 rather than
+> compiling — a few seconds and about 10 MB. If it ever *does* fall back to
+> building from source, that is exactly the situation the swap file in step 3
+> exists for. Confirm it loaded with:
+>
+> ```bash
+> node -e "console.log(require('sharp').versions)"
+> ```
+>
+> Image optimisation is configured in **Settings → Storefront → Image
+> optimisation**. WebP is the default; AVIF produces smaller files but costs
+> roughly five times the CPU per image, which is worth knowing on one shared
+> vCPU.
 
 ## 11. Start the API with PM2
 

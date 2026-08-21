@@ -4,6 +4,7 @@ import { Product } from '../models/Product.js'
 import { Customer } from '../models/Customer.js'
 import { Conversation } from '../models/Conversation.js'
 import { ActivityLog } from '../models/ActivityLog.js'
+import { Visit } from '../models/Visit.js'
 import { requireAuth, requireAbility } from '../middleware/auth.js'
 import { asyncHandler } from '../utils/helpers.js'
 
@@ -24,7 +25,7 @@ router.get(
     const since = daysAgo(range)
     const prevSince = daysAgo(range * 2)
 
-    const [current, previous, statusCounts, paymentSplit, topProducts, lowStock, recentOrders, newCustomers, unreadChats, series] =
+    const [current, previous, statusCounts, paymentSplit, topProducts, lowStock, recentOrders, newCustomers, unreadChats, series, traffic] =
       await Promise.all([
         Order.aggregate([
           { $match: { ...REVENUE_MATCH, createdAt: { $gte: since } } },
@@ -58,6 +59,7 @@ router.get(
           { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, revenue: { $sum: '$totals.total' }, orders: { $sum: 1 } } },
           { $sort: { _id: 1 } },
         ]),
+        Visit.summary(since, prevSince),
       ])
 
     const cur = current[0] ?? { revenue: 0, orders: 0, items: 0 }
@@ -73,11 +75,32 @@ router.get(
         avgOrderValue: cur.orders ? Math.round(cur.revenue / cur.orders) : 0,
         newCustomers,
         unreadChats,
+        visitors: traffic.visitors,
+        pageViews: traffic.pageViews,
+        visitorsToday: traffic.today,
       },
       change: {
         revenue: pct(cur.revenue, prev.revenue),
         orders: pct(cur.orders, prev.orders),
+        visitors: traffic.change,
       },
+      /**
+       * Conversion rate is the number this dashboard was missing: revenue and
+       * orders alone cannot tell you whether a quiet week was fewer visitors or
+       * a checkout that stopped working.
+       *
+       * Null until there is enough traffic to mean anything. Visit tracking
+       * starts the day this is deployed while orders may go back months, so a
+       * naive divide reads "2800%" on day one — a number that is arithmetically
+       * correct and completely useless. Also capped, because a shop taking
+       * orders over WhatsApp will genuinely book more sales than it has
+       * tracked web sessions.
+       */
+      conversionRate:
+        traffic.visitors >= 20
+          ? Math.min(100, Math.round((cur.orders / traffic.visitors) * 1000) / 10)
+          : null,
+      traffic,
       statusCounts: Object.fromEntries(statusCounts.map((s) => [s._id, s.count])),
       paymentSplit: paymentSplit.map((p) => ({ method: p._id, count: p.count, revenue: p.revenue })),
       topProducts: topProducts.map((p) => ({ ...p._id, qty: p.qty, revenue: p.revenue })),

@@ -54,6 +54,14 @@ const FALLBACK = {
   policies: [],
   seo: {},
   analytics: {},
+  checkout: {
+    altPhone: 'optional',
+    email: 'optional',
+    notes: true,
+    giftOption: true,
+    requireTerms: true,
+    termsLabel: 'I agree to the terms of service and the return policy.',
+  },
 }
 
 const LANG_KEY = 'gbs.lang'
@@ -135,6 +143,8 @@ export function SettingsProvider({ children }) {
       policies: settings.policies ?? [],
       /** Public tracking IDs only — the CAPI token never leaves the server. */
       analytics: settings.analytics ?? FALLBACK.analytics,
+      /** Which fields the checkout asks for — see Settings → Checkout form. */
+      checkout: { ...FALLBACK.checkout, ...(settings.checkout ?? {}) },
     }),
     [settings, loading, online, load, lang, setLang, tf],
   )

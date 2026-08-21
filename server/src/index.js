@@ -67,7 +67,28 @@ app.use(express.urlencoded({ extended: true }))
 
 if (!isProd) app.use(morgan('dev'))
 
-app.use('/uploads', express.static(env.uploadDir, { maxAge: '30d' }))
+/**
+ * Uploaded files are user-supplied content served from the API's own origin,
+ * which is where the admin session cookie lives. An SVG is a *document*: open
+ * one directly and any script inside it runs as that origin, able to make
+ * authenticated same-origin requests with the admin's cookie attached.
+ *
+ * The sandbox CSP neutralises that — scripts, plugins and form submission are
+ * all refused — while leaving ordinary <img> rendering untouched, since
+ * browsers already disable scripting in images loaded that way.
+ */
+app.use(
+  '/uploads',
+  (_req, res, next) => {
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox",
+    )
+    res.setHeader('X-Content-Type-Options', 'nosniff')
+    next()
+  },
+  express.static(env.uploadDir, { maxAge: '30d' }),
+)
 
 app.use(
   '/api',

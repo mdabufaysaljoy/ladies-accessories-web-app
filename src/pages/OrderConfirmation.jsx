@@ -9,6 +9,7 @@ import { EmptyState, usePageMeta } from '@/components/common/PageShell'
 import { useWhatsAppLink } from '@/context/SettingsContext'
 import { bestsellers } from '@/data/products'
 import { useStore } from '@/context/StoreContext'
+import { API_BASE } from '@/lib/api'
 import { trackPurchase } from '@/lib/tracking'
 import { cx, formatDate, taka } from '@/utils/format'
 
@@ -82,7 +83,7 @@ export default function OrderConfirmation() {
 
   /** The invoice endpoint authorises on the order's own phone number. */
   const invoiceUrl = (mode) =>
-    `/api/orders/${order.orderNumber}/invoice?phone=${encodeURIComponent(order.customer.phone)}${
+    `${API_BASE}/orders/${order.orderNumber}/invoice?phone=${encodeURIComponent(order.customer.phone)}${
       mode === 'print' ? '&print=1' : ''
     }`
 

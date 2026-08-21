@@ -3,8 +3,16 @@ import { env } from '../config/env.js'
 import { AdminUser } from '../models/AdminUser.js'
 import { ApiError, asyncHandler } from '../utils/helpers.js'
 
+/**
+ * Admin and customer sessions are signed with the same secret, so the audience
+ * claim is what keeps them apart. Without it a customer token verifies here
+ * perfectly well and is only rejected because its `sub` happens not to exist
+ * in the admin collection — defence by coincidence rather than by design.
+ */
+const AUDIENCE = 'admin'
+
 export const signToken = (user) =>
-  jwt.sign({ sub: String(user._id), v: user.tokenVersion }, env.jwtSecret, {
+  jwt.sign({ sub: String(user._id), v: user.tokenVersion, aud: AUDIENCE }, env.jwtSecret, {
     expiresIn: env.jwtExpiry,
   })
 
@@ -20,7 +28,7 @@ export const requireAuth = asyncHandler(async (req, _res, next) => {
 
   let payload
   try {
-    payload = jwt.verify(token, env.jwtSecret)
+    payload = jwt.verify(token, env.jwtSecret, { audience: AUDIENCE })
   } catch {
     throw ApiError.unauthorized('Session expired — please sign in again')
   }
