@@ -10,7 +10,6 @@ export function MediaPicker({ open, onClose, onSelect, multiple = true }) {
   const [media, setMedia] = useState(null)
   const [picked, setPicked] = useState([])
   const [uploading, setUploading] = useState(false)
-  const [savings, setSavings] = useState('')
   const inputRef = useRef(null)
 
   const load = useCallback(async () => {
@@ -141,6 +140,8 @@ export function ImageManager({ value = [], onChange, alt = '' }) {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
+  /** "5.2 MB → 103 KB · 98% smaller", shown after a successful upload. */
+  const [savings, setSavings] = useState('')
   const inputRef = useRef(null)
 
   const append = (urls) =>

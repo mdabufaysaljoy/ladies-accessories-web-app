@@ -23,10 +23,18 @@ router.get(
     const { page, limit, skip } = paginate(req.query)
     const {
       category, subcategory, q, tag, minPrice, maxPrice, sort = 'featured',
-      featured, badge, inStock,
+      featured, badge, inStock, slugs,
     } = req.query
 
     const filter = { status: 'active' }
+    /**
+     * `?slugs=a,b,c` — fetch a specific, hand-picked set in one request. The
+     * homepage hero uses this for the products the admin chose, rather than
+     * firing one request per slot.
+     */
+    if (slugs) {
+      filter.slug = { $in: String(slugs).split(',').map((x) => x.trim()).filter(Boolean).slice(0, 20) }
+    }
     if (category) filter.category = category
     if (subcategory) filter.subcategory = subcategory
     if (tag) filter.tags = tag

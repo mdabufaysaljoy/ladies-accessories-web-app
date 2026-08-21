@@ -68,6 +68,7 @@ export default function SettingsPage() {
   const [data, setData] = useState(null)
   const [status, setStatus] = useState(null)
   const [courierStatus, setCourierStatus] = useState(null)
+  const [catalogue, setCatalogue] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [dirty, setDirty] = useState(false)
@@ -76,14 +77,18 @@ export default function SettingsPage() {
 
   const load = useCallback(async () => {
     try {
-      const [s, st, co] = await Promise.all([
+      const [s, st, co, prods] = await Promise.all([
         adminApi.get('/settings/admin'),
         adminApi.get('/settings/integration-status').catch(() => null),
         adminApi.get('/couriers').catch(() => null),
+        // For the hero product pickers — active products only, since an
+        // archived one would render a dead card on the homepage.
+        adminApi.get('/products/admin/list?status=active&limit=300').catch(() => null),
       ])
       setData(s.settings)
       setStatus(st)
       setCourierStatus(co?.couriers ?? null)
+      setCatalogue(prods?.products ?? [])
       setDirty(false)
     } catch (err) {
       push(err.message, 'error')
@@ -378,6 +383,48 @@ export default function SettingsPage() {
                   <Input value={data.storefront.heroCtaHref} onChange={(e) => set('storefront', { heroCtaHref: e.target.value })} />
                 </Field>
               </div>
+              <Field
+                label="Featured products"
+                hint="The three products shown in the hero, in order"
+              >
+                <div className="space-y-2">
+                  {[
+                    { i: 0, label: 'Large card' },
+                    { i: 1, label: 'Floating card' },
+                    { i: 2, label: 'Small thumbnail' },
+                  ].map(({ i, label }) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <span className="w-28 shrink-0 text-[0.75rem] text-ink/50">{label}</span>
+                      <Select
+                        value={data.storefront.heroProducts?.[i] ?? ''}
+                        onChange={(e) => {
+                          const next = [...(data.storefront.heroProducts ?? [])]
+                          // Keep the array dense so slot 3 cannot be set while
+                          // slot 2 is empty and shift the whole composition.
+                          next[i] = e.target.value
+                          set('storefront', { heroProducts: next.filter((v, n) => v || n < next.length - 1) })
+                        }}
+                      >
+                        <option value="">Auto — pick a featured product</option>
+                        {catalogue.map((p) => (
+                          <option key={p._id} value={p.slug}>
+                            {p.name}
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
+                  ))}
+                </div>
+              </Field>
+
+              <Field label="Badge text" hint="The small pill above the headline">
+                <Input
+                  value={data.storefront.heroBadge ?? ''}
+                  onChange={(e) => set('storefront', { heroBadge: e.target.value })}
+                  placeholder="New season hijabs just landed"
+                />
+              </Field>
+
               <Field label="Hero statistics">
                 <Repeater
                   items={data.storefront.stats ?? []}

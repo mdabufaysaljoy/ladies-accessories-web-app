@@ -300,6 +300,14 @@ const settingsSchema = new mongoose.Schema(
       heroCtaLabel: { type: String, default: 'Shop the collection' },
       heroCtaHref: { type: String, default: '/shop' },
       stats: [{ value: String, label: String }],
+      /**
+       * The three products shown in the hero, by slug and in display order:
+       * the large card, then the small floating one, then the thumbnail.
+       * Empty falls back to whatever is flagged `featured`, so the hero is
+       * never blank on a fresh install.
+       */
+      heroProducts: [{ type: String }],
+      heroBadge: { type: String, default: 'New season hijabs just landed' },
     },
 
 
