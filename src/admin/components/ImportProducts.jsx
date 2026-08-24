@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { adminApi, getToken, API_BASE } from '@/lib/api'
+import { adminApi, downloadAdminFile } from '@/lib/api'
 import { Badge, Btn, Modal, Select } from './ui'
 import { Icon } from '@/components/ui/Icon'
 import { cx } from '@/utils/format'
@@ -71,9 +71,9 @@ export function ImportProducts({ open, onClose, onImported }) {
 
   const pick = (chosen) => {
     if (!chosen) return
-    const ok = /\.(csv|json)$/i.test(chosen.name)
+    const ok = /\.(csv|xlsx|json)$/i.test(chosen.name)
     if (!ok) {
-      setError('Please choose a .csv or .json file')
+      setError('Please choose a .csv, .xlsx or .json file')
       return
     }
     setFile(chosen)
@@ -88,19 +88,10 @@ export function ImportProducts({ open, onClose, onImported }) {
    */
   const downloadTemplate = async (format) => {
     try {
-      const res = await fetch(`${API_BASE}/products/import/template?format=${format}`, {
-        headers: { Authorization: `Bearer ${getToken()}` },
-      })
-      if (!res.ok) throw new Error('Could not fetch the template')
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `product-import-template.${format}`
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      URL.revokeObjectURL(url)
+      await downloadAdminFile(
+        `/products/import/template?format=${format}`,
+        `product-import-template.${format}`,
+      )
     } catch (err) {
       setError(err.message)
     }
@@ -119,11 +110,14 @@ export function ImportProducts({ open, onClose, onImported }) {
       open={open}
       onClose={close}
       title="Import products"
-      description="Upload a CSV or JSON file. Nothing is saved until you confirm."
+      description="Upload a CSV, Excel or JSON file. Nothing is saved until you confirm."
       size="lg"
       footer={
         <div className="flex w-full flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap gap-2">
+            <Btn size="sm" variant="ghost" onClick={() => downloadTemplate('xlsx')}>
+              <Icon name="arrowRight" size={13} /> Excel template
+            </Btn>
             <Btn size="sm" variant="ghost" onClick={() => downloadTemplate('csv')}>
               <Icon name="arrowRight" size={13} /> CSV template
             </Btn>
@@ -189,14 +183,14 @@ export function ImportProducts({ open, onClose, onImported }) {
               </>
             ) : (
               <>
-                <p className="mt-3 font-medium">Drop a .csv or .json file here</p>
+                <p className="mt-3 font-medium">Drop a .csv, .xlsx or .json file here</p>
                 <p className="mt-1 text-[0.8125rem] text-ink/50">or click to browse — up to 2000 products</p>
               </>
             )}
             <input
               ref={inputRef}
               type="file"
-              accept=".csv,.json,text/csv,application/json"
+              accept=".csv,.xlsx,.json,text/csv,application/json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
               className="hidden"
               onChange={(e) => pick(e.target.files?.[0])}
             />

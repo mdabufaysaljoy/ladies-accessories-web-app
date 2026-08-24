@@ -3,6 +3,7 @@ import { useLocalStorage } from '@/hooks/useLocalStorage'
 import { PRODUCTS } from '@/data/products'
 import { useSettings } from '@/context/SettingsContext'
 import { api } from '@/lib/api'
+import { freeShippingThreshold, qualifiesForFreeShipping } from '@/utils/format'
 import { trackAddToCart } from '@/lib/tracking'
 
 const StoreContext = createContext(null)
@@ -148,7 +149,8 @@ export function StoreProvider({ children }) {
       zones[0] ?? { id: 'dhaka-city', label: 'Inside Dhaka City', charge: 70, eta: '1–2 working days' },
     [zones, zoneId],
   )
-  const freeThreshold = delivery.freeShippingThreshold ?? 2000
+  // 0 means the shop has switched free delivery off — see utils/format.
+  const freeThreshold = freeShippingThreshold(delivery)
 
   const totals = useMemo(() => {
     const itemCount = lines.reduce((n, l) => n + l.qty, 0)
@@ -158,7 +160,8 @@ export function StoreProvider({ children }) {
     if (coupon?.type === 'flat') discount = Math.min(coupon.value, subtotal)
 
     const qualifiesFreeShipping =
-      subtotal >= freeThreshold || (coupon?.type === 'shipping' && subtotal >= (coupon.minSpend ?? coupon.min ?? 0))
+      qualifiesForFreeShipping(subtotal, delivery) ||
+      (coupon?.type === 'shipping' && subtotal >= (coupon.minSpend ?? coupon.min ?? 0))
 
     const shipping = itemCount === 0 || qualifiesFreeShipping ? 0 : zone.charge
     const savings =
@@ -170,7 +173,8 @@ export function StoreProvider({ children }) {
       discount,
       shipping,
       qualifiesFreeShipping,
-      amountToFreeShipping: Math.max(0, freeThreshold - subtotal),
+      // Meaningless when the offer is off, so report nothing to add.
+      amountToFreeShipping: freeThreshold > 0 ? Math.max(0, freeThreshold - subtotal) : 0,
       savings,
       total: Math.max(0, subtotal - discount) + shipping,
     }

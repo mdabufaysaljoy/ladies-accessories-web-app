@@ -33,7 +33,7 @@ const PAIRED = 'flex-1 basis-0 min-w-0 px-3 text-[0.875rem] sm:px-5 sm:text-[0.9
 export default function ProductDetail() {
   const { slug } = useParams()
   const { product, related, loading } = useProduct(slug)
-  const { zones, storefront, delivery, contact } = useSettings()
+  const { zones, storefront, delivery, contact, productPage } = useSettings()
   const categories = useCategories()
   const navigate = useNavigate()
   const { addToCart, toggleWishlist, inWishlist, trackView, recentProducts, toast } = useStore()
@@ -80,6 +80,34 @@ export default function ProductDetail() {
   const discount = percentOff(product.price, product.compareAt)
   const saved = inWishlist(product.slug)
   const soldOut = product.stock === 0
+
+  /**
+   * The admin writes these rows as plain text with a few placeholders, so the
+   * delivery numbers stay tied to the delivery settings instead of being
+   * copied by hand and going stale. `{freeShipping}` deliberately renders as
+   * plain "Free delivery" when no threshold is set — "over ৳0" is nonsense.
+   */
+  const assuranceRows = (productPage.assurances ?? [])
+    .filter((row) => row?.enabled !== false && (row?.title || row?.body))
+    .map((row) => {
+      const zoneSummary = zones.length
+        ? `${zones[0]?.label}: ${zones[0]?.eta} · ${zones[zones.length - 1]?.label}: ${zones[zones.length - 1]?.eta}`
+        : ''
+      const threshold = Number(delivery.freeShippingThreshold) || 0
+      const fill = (text = '') =>
+        String(text)
+          .replace(/\{freeShipping\}/g, threshold > 0 ? taka(threshold) : '')
+          .replace(/\{deliveryZones\}/g, zoneSummary)
+          .replace(/\{returnDays\}/g, String(delivery.returnWindowDays ?? 7))
+          // A removed placeholder can leave "over ." or a double space behind.
+          .replace(/\s+over\s*\./gi, '.')
+          .replace(/\s{2,}/g, ' ')
+          .trim()
+
+      return { ...row, title: fill(row.title), body: fill(row.body) }
+    })
+
+  const specRows = (product.specifications ?? []).filter((sp) => sp?.label && sp?.value)
 
   const variant = { qty, color: color || null, size: size || null }
 
@@ -280,33 +308,32 @@ export default function ProductDetail() {
               </Button>
             </div>
 
-            {/* delivery + payment reassurance */}
-            <div className="mt-7 space-y-3 rounded-2xl bg-sand p-5">
-              <p className="flex items-start gap-3 text-[0.875rem]">
-                <Icon name="truck" size={18} className="mt-0.5 shrink-0 text-ink/45" />
-                <span className="text-ink/70">
-                  <strong className="font-semibold text-ink">Free delivery over {taka(delivery.freeShippingThreshold)}.</strong>{' '}
-                  {zones[0]?.label}: {zones[0]?.eta} · {zones[zones.length - 1]?.label}:{' '}
-                  {zones[zones.length - 1]?.eta}
-                </span>
-              </p>
-              <p className="flex items-start gap-3 text-[0.875rem]">
-                <Icon name="cash" size={18} className="mt-0.5 shrink-0 text-ink/45" />
-                <span className="text-ink/70">
-                  <strong className="font-semibold text-ink">Cash on delivery</strong> nationwide, or pay
-                  with bKash, Nagad, Rocket or card via SSLCommerz.
-                </span>
-              </p>
-              <p className="flex items-start gap-3 text-[0.875rem]">
-                <Icon name="refresh" size={18} className="mt-0.5 shrink-0 text-ink/45" />
-                <span className="text-ink/70">
-                  <strong className="font-semibold text-ink">7-day returns</strong> on unopened items.{' '}
-                  <Link to="/policy/returns" className="underline underline-offset-2">
-                    Read the policy
-                  </Link>
-                </span>
-              </p>
-            </div>
+            {/* Delivery and payment reassurance — every row editable and
+                switchable from Settings → Storefront → Product page. */}
+            {productPage.showAssurances !== false && assuranceRows.length > 0 && (
+              <div className="mt-7 space-y-3 rounded-2xl bg-sand p-5">
+                {assuranceRows.map((row, i) => (
+                  <p key={i} className="flex items-start gap-3 text-[0.875rem]">
+                    <Icon name={row.icon || 'checkCircle'} size={18} className="mt-0.5 shrink-0 text-ink/45" />
+                    <span className="text-ink/70">
+                      {row.title && (
+                        <strong className="font-semibold text-ink">{row.title}</strong>
+                      )}
+                      {row.title && row.body ? ' ' : ''}
+                      {row.body}
+                      {row.link && row.linkLabel && (
+                        <>
+                          {' '}
+                          <Link to={row.link} className="underline underline-offset-2">
+                            {row.linkLabel}
+                          </Link>
+                        </>
+                      )}
+                    </span>
+                  </p>
+                ))}
+              </div>
+            )}
 
             {/* details — description and specification stay open: this is the
                 copy that decides the sale, so it should never need a click */}
@@ -327,6 +354,39 @@ export default function ProductDetail() {
                   </li>
                 ))}
               </ul>
+
+              {/* The key/value specs entered in the admin editor. They were
+                  being stored and never shown anywhere before. */}
+              {productPage.showSpecifications !== false && specRows.length > 0 && (
+                <div className="mt-6 border-t border-ink/10 pt-5">
+                  <h3 className="text-[0.75rem] font-semibold uppercase tracking-[0.14em] text-ink/45">
+                    {productPage.specificationsTitle || 'Specifications'}
+                  </h3>
+
+                  {/* A table on its own scroll track, so a long value cannot
+                      push the whole page sideways on a phone. */}
+                  <div className="mt-3 overflow-x-auto">
+                    <table className="w-full border-collapse text-[0.9375rem]">
+                      <tbody>
+                        {specRows.map((spec, i) => (
+                          <tr
+                            key={`${spec.label}-${i}`}
+                            className="border-b border-ink/8 last:border-0 even:bg-sand/40"
+                          >
+                            <th
+                              scope="row"
+                              className="w-[42%] py-2.5 pr-4 text-left align-top font-medium text-ink/60"
+                            >
+                              {spec.label}
+                            </th>
+                            <td className="py-2.5 align-top text-ink/80">{spec.value}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
 
             <Accordion

@@ -8,7 +8,10 @@ import {
   buildTemplate,
   csvToObjects,
   importProducts,
+  PRODUCT_EXPORT_COLUMNS,
+  productToRow,
 } from '../services/productImport.js'
+import { buildExport, xlsxToObjects } from '../services/dataExport.js'
 
 const router = Router()
 
@@ -89,6 +92,59 @@ router.get(
   }),
 )
 
+/* ------------------------------ bulk export ------------------------------ */
+
+/**
+ * GET /api/products/export?format=csv|xlsx|json
+ *
+ * The same filters the admin list accepts, so "export what I am looking at"
+ * works — exporting 2,000 rows when the screen shows 12 archived items is not
+ * what anyone means by export.
+ */
+router.get(
+  '/export',
+  requireAuth,
+  requireAbility('products'),
+  asyncHandler(async (req, res) => {
+    const format = ['csv', 'xlsx', 'json'].includes(req.query.format) ? req.query.format : 'csv'
+    const { q, category, status } = req.query
+
+    const filter = {}
+    if (category) filter.category = category
+    if (status) filter.status = status
+    if (q) {
+      const rx = new RegExp(String(q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
+      filter.$or = [{ name: rx }, { sku: rx }, { slug: rx }]
+    }
+
+    const products = await Product.find(filter).sort('-createdAt').limit(5000)
+    const rows = products.map(productToRow)
+
+    const out = await buildExport({
+      format,
+      columns: PRODUCT_EXPORT_COLUMNS,
+      rows,
+      name: 'products',
+      sheetName: 'Products',
+    })
+
+    await logActivity({
+      actor: req.user._id, actorName: req.user.name,
+      action: 'product.export', entity: 'Product',
+      summary: `Exported ${rows.length} products as ${format.toUpperCase()}`,
+    })
+
+    res.setHeader('Content-Type', out.contentType)
+    res.setHeader('Content-Disposition', `attachment; filename="${out.filename}"`)
+    res.send(out.body)
+  }),
+)
+
+/**
+ * NOTE: every literal path must be declared above `/:slug` — Express matches
+ * in order, so a route added later would be swallowed as a product slug and
+ * answer 404.
+ */
 router.get(
   '/:slug',
   asyncHandler(async (req, res) => {
@@ -298,7 +354,22 @@ router.get(
   requireAuth,
   requireAbility('products'),
   asyncHandler(async (req, res) => {
-    const format = req.query.format === 'json' ? 'json' : 'csv'
+    const format = ['json', 'xlsx', 'csv'].includes(req.query.format) ? req.query.format : 'csv'
+
+    if (format === 'xlsx') {
+      const sample = JSON.parse(buildTemplate('json'))
+      const out = await buildExport({
+        format: 'xlsx',
+        columns: Object.keys(sample[0]).map((k) => ({ header: k, key: k })),
+        rows: sample,
+        name: 'product-import-template',
+        sheetName: 'Products',
+      })
+      res.setHeader('Content-Type', out.contentType)
+      res.setHeader('Content-Disposition', `attachment; filename="${out.filename}"`)
+      return res.send(out.body)
+    }
+
     const body = buildTemplate(format)
     res.setHeader('Content-Type', format === 'json' ? 'application/json' : 'text/csv; charset=utf-8')
     res.setHeader('Content-Disposition', `attachment; filename="product-import-template.${format}"`)
@@ -326,12 +397,24 @@ router.post(
 
     let rows = []
     if (req.file) {
-      const text = req.file.buffer.toString('utf8')
+      // An .xlsx is binary; only text formats are decoded.
+      const text = req.file.originalname.toLowerCase().endsWith('.xlsx')
+        ? ''
+        : req.file.buffer.toString('utf8')
       const isJson =
         req.file.originalname.toLowerCase().endsWith('.json') ||
         req.file.mimetype === 'application/json'
 
-      if (isJson) {
+      const lower = req.file.originalname.toLowerCase()
+
+      if (lower.endsWith('.xlsx')) {
+        try {
+          // Read the binary buffer, not the utf8 decode above — an xlsx is a zip.
+          rows = await xlsxToObjects(req.file.buffer)
+        } catch (err) {
+          throw ApiError.badRequest(`That spreadsheet could not be read: ${err.message}`)
+        }
+      } else if (isJson) {
         let parsed
         try {
           parsed = JSON.parse(text)
@@ -418,8 +501,15 @@ router.delete(
     const product = await Product.findById(req.params.id)
     if (!product) throw ApiError.notFound('Product not found')
 
-    // Hard delete would orphan order lines; archiving keeps history intact.
-    if (req.query.hard === 'true' && req.user.role === 'owner') {
+    /**
+     * Archiving is the default because it is reversible, not because deleting
+     * is unsafe: every order line stores its own copy of the name, price, SKU
+     * and image, and nothing populates the Product, so invoices and order
+     * history render correctly long after the product is gone. Permanent
+     * deletion stays owner-only all the same — it cannot be undone.
+     */
+    const hardDeleted = req.query.hard === 'true' && req.user.role === 'owner'
+    if (hardDeleted) {
       await product.deleteOne()
     } else {
       product.status = 'archived'
@@ -429,10 +519,10 @@ router.delete(
     await logActivity({
       actor: req.user._id, actorName: req.user.name,
       action: 'product.delete', entity: 'Product', entityId: req.params.id,
-      summary: `Removed “${product.name}”`,
+      summary: `${hardDeleted ? 'Deleted' : 'Archived'} “${product.name}”`,
     })
 
-    res.json({ ok: true })
+    res.json({ ok: true, deleted: hardDeleted, status: hardDeleted ? 'deleted' : 'archived' })
   }),
 )
 

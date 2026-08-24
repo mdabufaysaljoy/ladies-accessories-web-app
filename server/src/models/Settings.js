@@ -217,9 +217,26 @@ const settingsSchema = new mongoose.Schema(
       },
       sms: {
         enabled: { type: Boolean, default: false },
-        provider: { type: String, default: 'bulksmsbd' },
+        // 'alpha' is accepted because installs already store it; treating it
+        // as invalid would make every settings save fail on those shops.
+        provider: { type: String, enum: ['alphasms', 'alpha', 'bulksmsbd'], default: 'alphasms' },
         apiKey: secretField,
         senderId: { type: String, default: '' },
+        /**
+         * Ready-made order messages. Placeholders {name} {order} {total}
+         * {status} {tracking} are filled from the order, so the shop writes
+         * each one once. Kept short because a single SMS is 160 characters —
+         * 70 if any Bangla is used.
+         */
+        orderTemplates: {
+          type: [{ label: String, text: String }],
+          default: () => [
+            { label: 'Order confirmed', text: 'Hi {name}, your order {order} is confirmed. Total {total}. We will call before delivery. - Goods by Sadia' },
+            { label: 'Dispatched', text: 'Hi {name}, order {order} has been dispatched. Tracking: {tracking}. - Goods by Sadia' },
+            { label: 'Out for delivery', text: 'Hi {name}, order {order} is out for delivery today. Please keep {total} ready. - Goods by Sadia' },
+            { label: 'Delivered - thank you', text: 'Thank you {name}! Order {order} is delivered. We would love a review. - Goods by Sadia' },
+          ],
+        },
       },
       /**
        * Marketing tracking. The IDs here are public by nature — they end up in
@@ -250,6 +267,53 @@ const settingsSchema = new mongoose.Schema(
         /** Logs every event the server forwards. Leave off in production. */
         debug: { type: Boolean, default: false },
       },
+    },
+
+    /**
+     * The reassurance rows under the buy box on every product page.
+     *
+     * Fully editable because the promises differ per shop and change over
+     * time — a shop that stops free delivery must be able to say so without a
+     * deploy. The text supports a few placeholders so the numbers stay true to
+     * the delivery settings rather than being copied by hand:
+     *   {freeShipping}    → the free-delivery threshold, formatted
+     *   {deliveryZones}   → "Inside Dhaka: 1–2 days · Outside Dhaka: 2–4 days"
+     *   {returnDays}      → the returns window in days
+     */
+    productPage: {
+      showAssurances: { type: Boolean, default: true },
+      assurances: {
+        type: [
+          {
+            icon: { type: String, default: 'checkCircle' },
+            title: { type: String, default: '' },
+            body: { type: String, default: '' },
+            link: { type: String, default: '' },
+            linkLabel: { type: String, default: '' },
+            enabled: { type: Boolean, default: true },
+          },
+        ],
+        default: () => [
+          { icon: 'truck', title: 'Free delivery over {freeShipping}.', body: '{deliveryZones}', enabled: true },
+          {
+            icon: 'cash',
+            title: 'Cash on delivery',
+            body: 'nationwide, or pay with bKash, Nagad, Rocket or card via SSLCommerz.',
+            enabled: true,
+          },
+          {
+            icon: 'refresh',
+            title: '{returnDays}-day returns',
+            body: 'on unopened items.',
+            link: '/policy/returns',
+            linkLabel: 'Read the policy',
+            enabled: true,
+          },
+        ],
+      },
+      /** Show the key=value specification table under the description. */
+      showSpecifications: { type: Boolean, default: true },
+      specificationsTitle: { type: String, default: 'Specifications' },
     },
 
     /**

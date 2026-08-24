@@ -22,6 +22,38 @@ const timeAgo = (date) => {
   return `${Math.floor(mins / 1440)}d`
 }
 
+/**
+ * The contact's real picture when Meta gave us one, the initial otherwise.
+ *
+ * The URL is a signed Facebook CDN link that expires, so a failed load falls
+ * back to the initial rather than leaving a broken image in the list.
+ */
+function Avatar({ contact, size = 40 }) {
+  const [broken, setBroken] = useState(false)
+  const initial = (contact?.name ?? '?').charAt(0).toUpperCase()
+
+  if (contact?.avatarUrl && !broken) {
+    return (
+      <img
+        src={contact.avatarUrl}
+        alt=""
+        onError={() => setBroken(true)}
+        className="shrink-0 rounded-full bg-blush object-cover"
+        style={{ width: size, height: size }}
+        referrerPolicy="no-referrer"
+      />
+    )
+  }
+  return (
+    <span
+      className="grid shrink-0 place-items-center rounded-full bg-blush font-display text-plum"
+      style={{ width: size, height: size, fontSize: size * 0.36 }}
+    >
+      {initial}
+    </span>
+  )
+}
+
 export default function Inbox() {
   const [channel, setChannel] = useState('all')
   const [q, setQ] = useState('')
@@ -175,9 +207,7 @@ export default function Inbox() {
                         )}
                       >
                         <span className="relative shrink-0">
-                          <span className="grid h-10 w-10 place-items-center rounded-full bg-blush font-display text-[0.875rem] text-plum">
-                            {(c.contact?.name ?? '?').charAt(0).toUpperCase()}
-                          </span>
+                          <Avatar contact={c.contact} size={40} />
                           <span className={cx('absolute -bottom-0.5 -right-0.5 grid h-5 w-5 place-items-center rounded-full bg-white', meta.color)}>
                             <Icon name={meta.icon} size={11} />
                           </span>
@@ -214,11 +244,25 @@ export default function Inbox() {
           ) : (
             <>
               <header className="flex items-center gap-3 border-b border-ink/8 px-5 py-3.5">
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-blush font-display text-plum">
-                  {(convo.contact?.name ?? '?').charAt(0).toUpperCase()}
-                </span>
+                <Avatar contact={convo.contact} size={40} />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[0.9375rem] font-medium">{convo.contact?.name ?? convo.externalId}</p>
+                  {/* Facebook does not expose a profile URL for a page-scoped
+                      ID, so the name opens the thread in Meta's own inbox —
+                      the one place an admin can actually see the person. */}
+                  {convo.threadUrl ? (
+                    <a
+                      href={convo.threadUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 truncate text-[0.9375rem] font-medium hover:text-plum"
+                      title="Open this conversation on Meta"
+                    >
+                      <span className="truncate">{convo.contact?.name ?? convo.externalId}</span>
+                      <Icon name="arrowUpRight" size={13} className="shrink-0 opacity-60" />
+                    </a>
+                  ) : (
+                    <p className="truncate text-[0.9375rem] font-medium">{convo.contact?.name ?? convo.externalId}</p>
+                  )}
                   <p className="flex items-center gap-1.5 text-[0.75rem] text-ink/50">
                     <Icon name={CHANNEL_META[convo.channel]?.icon} size={12} className={CHANNEL_META[convo.channel]?.color} />
                     {convo.contact?.phone ?? convo.contact?.username ?? convo.externalId}

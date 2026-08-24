@@ -60,3 +60,51 @@ export const optimisationSummary = (o) => {
   if (!o.savedPercent || o.savedPercent <= 0) return `${to} stored`
   return `${from} → ${to} · ${o.savedPercent}% smaller`
 }
+
+/**
+ * Free-delivery rule, in one place so the cart, checkout, quick-order and the
+ * progress bar cannot drift apart from each other or from the server.
+ *
+ * A threshold of 0 (or unset) means the shop has turned free delivery off.
+ * `subtotal >= 0` is always true, so treating 0 as a real threshold silently
+ * made every order free — the opposite of what switching it off should do.
+ */
+export const freeShippingThreshold = (delivery) => Number(delivery?.freeShippingThreshold) || 0
+
+export const qualifiesForFreeShipping = (subtotal, delivery) => {
+  const threshold = freeShippingThreshold(delivery)
+  return threshold > 0 && subtotal >= threshold
+}
+
+/* ----------------------------- input guards ------------------------------ */
+
+/**
+ * Input sanitisers, applied as the shopper types rather than only on submit.
+ *
+ * Validating at submit alone lets someone fill a phone box with letters and
+ * only find out at the end; stripping as they type means the field simply
+ * cannot hold nonsense. Submit-time validation still runs — this is the first
+ * line, not the only one.
+ */
+
+/** Digits and a single leading `+`, capped at +88 01X XXXXXXXX. */
+export const sanitisePhoneInput = (value) => {
+  const raw = String(value ?? '')
+  const plus = raw.trimStart().startsWith('+')
+  return (plus ? '+' : '') + raw.replace(/\D/g, '').slice(0, 13)
+}
+
+/** Whole numbers only — quantities, counts, stock. */
+export const sanitiseDigits = (value, max = 9) =>
+  String(value ?? '').replace(/\D/g, '').slice(0, max)
+
+/**
+ * A money amount: digits with at most one decimal point, no sign. Rejects the
+ * `e`, `+` and `-` that a browser's own number input quietly allows.
+ */
+export const sanitiseAmount = (value, { decimals = 2 } = {}) => {
+  const cleaned = String(value ?? '').replace(/[^\d.]/g, '')
+  const [whole, ...rest] = cleaned.split('.')
+  if (!rest.length) return whole.slice(0, 9)
+  return `${whole.slice(0, 9)}.${rest.join('').slice(0, decimals)}`
+}

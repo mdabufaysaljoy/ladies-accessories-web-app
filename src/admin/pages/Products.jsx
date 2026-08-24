@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { adminApi, api, qs } from '@/lib/api'
+import { adminApi, api, qs, downloadAdminFile } from '@/lib/api'
 import {
-  AdminPage, Badge, Btn, Card, Checkbox, ConfirmDialog, EmptyRow, Pagination,
-  SearchInput, Select, Spinner, Table, Td, useToasts,
+  AdminPage, Badge, Btn, Card, Checkbox, EmptyRow, Modal, Pagination, SearchInput, Select, Spinner, Table, Td, useToasts,
 } from '../components/ui'
 import { Icon } from '@/components/ui/Icon'
+import { useAdminAuth } from '../AdminAuth'
 import { ProductArt } from '@/components/product/ProductArt'
 import { ImportProducts } from '../components/ImportProducts'
 import { taka } from '@/utils/format'
@@ -21,6 +21,42 @@ export default function Products() {
   const [confirm, setConfirm] = useState(null)
   const [importOpen, setImportOpen] = useState(false)
   const { push, node } = useToasts()
+  const { user } = useAdminAuth()
+  const isOwner = user?.role === 'owner'
+  const [removing, setRemoving] = useState(false)
+
+  /**
+   * Downloads are authenticated, so they cannot be a plain link — fetch with
+   * the admin token and hand the browser a blob.
+   */
+  const exportProducts = async (format) => {
+    try {
+      await downloadAdminFile(`/products/export${qs({ format, category, status, q })}`, `products.${format}`)
+      push(`Exported as ${format.toUpperCase()}`)
+    } catch (err) {
+      push(err.message, 'error')
+    }
+  }
+
+  /**
+   * `hard` maps to the API's owner-only permanent delete; without it the
+   * product is archived. Either way the list is reloaded so the row visibly
+   * changes — the old flow reported success and left the row looking untouched.
+   */
+  const remove = async (hard) => {
+    setRemoving(true)
+    try {
+      await adminApi.delete(`/products/${confirm._id}${hard ? '?hard=true' : ''}`)
+      push(hard ? `“${confirm.name}” deleted` : `“${confirm.name}” archived`)
+      setConfirm(null)
+      load()
+    } catch (err) {
+      push(err.message, 'error')
+    } finally {
+      setRemoving(false)
+    }
+  }
+
 
   const category = params.get('category') ?? ''
   const status = params.get('status') ?? ''
@@ -85,6 +121,19 @@ export default function Products() {
       subtitle={data ? `${data.meta.total} products` : 'Loading…'}
       actions={
         <div className="flex flex-wrap gap-2">
+          {/* Exports honour the filters above, so "export what I'm looking at"
+              works rather than always dumping the whole catalogue. */}
+          <Select
+            value=""
+            onChange={(e) => e.target.value && exportProducts(e.target.value)}
+            className="w-auto"
+            aria-label="Export products"
+          >
+            <option value="">Export…</option>
+            <option value="xlsx">Excel (.xlsx)</option>
+            <option value="csv">CSV</option>
+            <option value="json">JSON</option>
+          </Select>
           <Btn variant="ghost" size="md" onClick={() => setImportOpen(true)}>
             <Icon name="grid" size={15} /> Bulk import
           </Btn>
@@ -215,7 +264,13 @@ export default function Products() {
                       <div className="flex justify-end gap-1.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
                         <Btn size="xs" onClick={() => duplicate(p)}>Duplicate</Btn>
                         <Btn as={Link} to={`/admin/products/${p._id}`} size="xs" variant="primary">Edit</Btn>
-                        <Btn size="xs" variant="danger" onClick={() => setConfirm(p)}>
+                        <Btn
+                          size="xs"
+                          variant="danger"
+                          onClick={() => setConfirm(p)}
+                          aria-label={`Remove ${p.name}`}
+                          title="Archive or delete"
+                        >
                           <Icon name="trash" size={12} />
                         </Btn>
                       </div>
@@ -235,18 +290,47 @@ export default function Products() {
         onImported={load}
       />
 
-      <ConfirmDialog
+      {/* Archiving and deleting are genuinely different outcomes, so the
+          dialog offers both rather than hiding one behind a trash icon that
+          silently archives and leaves the row sitting in the list. */}
+      <Modal
         open={Boolean(confirm)}
         onClose={() => setConfirm(null)}
-        title={`Archive “${confirm?.name}”?`}
-        body="The product is hidden from the storefront but kept so past orders still show it correctly. You can restore it any time from the Archived filter."
-        confirmLabel="Archive"
-        onConfirm={async () => {
-          await adminApi.delete(`/products/${confirm._id}`)
-          push('Product archived')
-          load()
-        }}
-      />
+        title={`Remove “${confirm?.name}”?`}
+        size="sm"
+        footer={
+          <div className="flex w-full flex-wrap justify-end gap-2">
+            <Btn variant="ghost" onClick={() => setConfirm(null)} disabled={removing}>
+              Cancel
+            </Btn>
+            <Btn onClick={() => remove(false)} loading={removing}>
+              Archive
+            </Btn>
+            {isOwner && (
+              <Btn variant="danger" onClick={() => remove(true)} loading={removing}>
+                Delete permanently
+              </Btn>
+            )}
+          </div>
+        }
+      >
+        <div className="space-y-3 text-[0.875rem] leading-relaxed text-ink/70">
+          <p>
+            <strong className="font-semibold text-ink">Archive</strong> hides it from the storefront
+            but keeps it in this list under the Archived filter, so you can put it back later.
+          </p>
+          <p>
+            <strong className="font-semibold text-ink">Delete permanently</strong> removes it for
+            good. Past orders and invoices are unaffected — each one stores its own copy of the name,
+            price and image as they were at the time of purchase.
+          </p>
+          {!isOwner && (
+            <p className="rounded-xl bg-sand px-3.5 py-2.5 text-[0.8125rem]">
+              Only an owner can delete permanently.
+            </p>
+          )}
+        </div>
+      </Modal>
     </AdminPage>
   )
 }

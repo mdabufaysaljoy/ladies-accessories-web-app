@@ -453,3 +453,41 @@ server you're backing up isn't a backup.
 capped tight (0.25 GB) and there's no headroom for a traffic spike or a
 second app. If this moves from testing to real orders, the first upgrade to
 make is RAM — 2 GB minimum — before anything else.
+
+## Troubleshooting
+
+### "Blocked by CORS policy" — but only when uploading a file
+
+If every other API call works and only uploads fail with
+
+```
+Access to fetch at 'https://api.yourdomain.com/api/media' from origin
+'https://yourdomain.com' has been blocked by CORS policy: No
+'Access-Control-Allow-Origin' header is present on the requested resource.
+```
+
+then this is almost certainly **not** a CORS problem. Nginx rejected the body
+with **413 Request Entity Too Large** before it ever reached Express, so the
+CORS middleware never ran and the error page carries no CORS header. The
+browser can only describe what it sees, which is a missing header.
+
+Confirm it in one command — the real status is in the Nginx log, not the
+browser:
+
+```bash
+sudo tail -f /var/log/nginx/error.log
+```
+
+A line containing `client intended to send too large body` is the giveaway.
+
+The fix is `client_max_body_size` in `/etc/nginx/sites-available/api.yourdomain.com`.
+It must stay above multer's per-file limit multiplied by its file count (see
+`server/src/middleware/upload.js`):
+
+```bash
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+This is also why it never reproduces locally: in development Vite proxies
+straight to Express with no Nginx in front, so nothing enforces a body limit.
+

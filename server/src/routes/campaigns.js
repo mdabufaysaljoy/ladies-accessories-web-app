@@ -3,12 +3,22 @@ import { Campaign } from '../models/Campaign.js'
 import { Subscriber } from '../models/Subscriber.js'
 import { Customer } from '../models/Customer.js'
 import { Settings } from '../models/Settings.js'
+import { measureSms, sendSms } from '../services/sms.js'
 import { requireAuth, requireAbility } from '../middleware/auth.js'
-import { ApiError, asyncHandler, paginate, meta } from '../utils/helpers.js'
+import { ApiError, asyncHandler, paginate, meta, normalizeBdPhone, isValidBdPhone } from '../utils/helpers.js'
 import { sendMail, renderShell } from '../services/mailer.js'
 import { logActivity } from '../models/ActivityLog.js'
 
 const router = Router()
+
+/**
+ * What a client may change on a campaign. Everything else — status, stats,
+ * sentAt, timestamps, the version key — is owned by the server.
+ */
+const EDITABLE_FIELDS = [
+  'name', 'channel', 'subject', 'smsText', 'preheader',
+  'bodyHtml', 'bodyText', 'template', 'audience', 'scheduledFor',
+]
 
 /* ----------------------------- public signup ----------------------------- */
 
@@ -110,13 +120,69 @@ router.patch(
     if (!campaign) throw ApiError.notFound('Campaign not found')
     if (campaign.status === 'sent') throw ApiError.badRequest('A sent campaign cannot be edited')
 
-    Object.assign(campaign, { ...req.body, _id: undefined, status: campaign.status })
+    /**
+     * A whitelist rather than `Object.assign(campaign, req.body)`.
+     *
+     * The previous version blanked `_id` to stop the client overwriting it,
+     * but assigning `_id: undefined` marks the key modified and Mongoose then
+     * saves against an id that no longer matches — every edit failed with
+     * DocumentNotFoundError. Naming the editable fields fixes that and also
+     * keeps `stats`, `sentAt` and `__v` out of the client's reach.
+     */
+    for (const key of EDITABLE_FIELDS) {
+      if (req.body?.[key] !== undefined) campaign[key] = req.body[key]
+    }
+
     await campaign.save()
     res.json({ campaign })
   }),
 )
 
 /** Resolves the audience into a deduplicated recipient list. */
+/**
+ * Phone numbers for an SMS campaign.
+ *
+ * Deliberately separate from the email resolver: subscribers have no phone
+ * number, and `acceptsMarketing` still gates it — an SMS to someone who did
+ * not opt in is worse than an unwanted email, because it costs them nothing to
+ * ignore an email and a mistrusted sender ID gets a shop blocked.
+ */
+async function resolvePhoneRecipients(audience) {
+  /**
+   * A pasted list is the admin's explicit instruction, so it is not filtered
+   * against the customer table at all — the numbers may belong to people who
+   * have never ordered. Invalid numbers are dropped rather than sent, because
+   * a gateway charges for a rejected message just the same.
+   */
+  if (audience.type === 'manual') {
+    const cleaned = (audience.manualPhones ?? [])
+      .map((raw) => normalizeBdPhone(raw))
+      .filter((phone) => isValidBdPhone(phone))
+    return [...new Set(cleaned)]
+  }
+
+  const customers = await Customer.find({
+    phone: { $exists: true, $ne: '' },
+    acceptsMarketing: true,
+  })
+
+  const segment = audience.segment ?? 'all'
+  const filtered = customers.filter((c) => {
+    if (c.riskFlag === 'blocked') return false
+    if (segment === 'new') return c.orderCount <= 1
+    if (segment === 'repeat') return c.orderCount >= 2 && c.orderCount < 5
+    if (segment === 'vip') return c.orderCount >= 5
+    return true
+  })
+
+  /**
+   * Normalised here too: the same person can be stored as `01712…` from the
+   * checkout form and `+8801712…` from an admin edit, and without this they
+   * would be billed as two recipients and receive the campaign twice.
+   */
+  return [...new Set(filtered.map((c) => normalizeBdPhone(c.phone)).filter(isValidBdPhone))]
+}
+
 async function resolveRecipients(audience) {
   if (audience.type === 'manual') {
     return [...new Set((audience.manualEmails ?? []).map((e) => e.toLowerCase().trim()).filter(Boolean))]
@@ -147,8 +213,27 @@ router.post(
   asyncHandler(async (req, res) => {
     const campaign = await Campaign.findById(req.params.id)
     if (!campaign) throw ApiError.notFound('Campaign not found')
-    const recipients = await resolveRecipients(campaign.audience)
-    res.json({ count: recipients.length, sample: recipients.slice(0, 8) })
+    const recipients =
+      campaign.channel === 'sms'
+        ? await resolvePhoneRecipients(campaign.audience)
+        : await resolveRecipients(campaign.audience)
+
+    /**
+     * For a pasted phone list, say how many lines were thrown away. A silent
+     * count of 8 when the admin pasted 10 numbers looks like the preview is
+     * broken; naming the two bad numbers lets them fix the typo.
+     */
+    let rejected = []
+    if (campaign.channel === 'sms' && campaign.audience.type === 'manual') {
+      rejected = (campaign.audience.manualPhones ?? []).filter((raw) => !isValidBdPhone(raw))
+    }
+
+    res.json({
+      count: recipients.length,
+      sample: recipients.slice(0, 8),
+      rejected: rejected.slice(0, 8),
+      rejectedCount: rejected.length,
+    })
   }),
 )
 
@@ -159,13 +244,28 @@ router.post(
     if (!campaign) throw ApiError.notFound('Campaign not found')
 
     const settings = await Settings.getSingleton()
+
+    /**
+     * A test of an SMS campaign has to go out over SMS. Mailing the shop a
+     * preview of a text message proves nothing about the part that actually
+     * costs money — the sender ID, the encoding, and whether the gateway
+     * accepts the body at all.
+     */
+    if (campaign.channel === 'sms') {
+      const to = req.body?.to || settings.contact.phone
+      if (!to) throw ApiError.badRequest('Add a phone number to send the test to')
+      const result = await sendSms(to, campaign.smsText)
+      if (!result.ok) throw ApiError.badRequest(result.error)
+      return res.json({ result, to, channel: 'sms' })
+    }
+
     const to = req.body?.to || settings.contact.email
     const result = await sendMail({
       to,
       subject: `[TEST] ${campaign.subject}`,
       html: buildHtml(campaign, settings, 'preview-token'),
     })
-    res.json({ result, to })
+    res.json({ result, to, channel: 'email' })
   }),
 )
 
@@ -202,6 +302,59 @@ router.post(
     if (campaign.status === 'sent') throw ApiError.badRequest('This campaign has already been sent')
 
     const settings = await Settings.getSingleton()
+
+    /* -------------------------------- SMS -------------------------------- */
+    if (campaign.channel === 'sms') {
+      const body = String(campaign.smsText ?? '').trim()
+      if (!body) throw ApiError.badRequest('Write the SMS message first')
+
+      const phones = await resolvePhoneRecipients(campaign.audience)
+      if (!phones.length) throw ApiError.badRequest('This audience has no phone numbers')
+
+      const measured = measureSms(body)
+
+      campaign.status = 'sending'
+      campaign.stats.recipients = phones.length
+      campaign.stats.sent = 0
+      campaign.stats.failed = 0
+      await campaign.save()
+
+      res.json({ ok: true, queued: phones.length, parts: measured.parts, campaign })
+
+      // Background, like the email path — the admin UI polls for progress.
+      ;(async () => {
+        let sent = 0
+        let failed = 0
+        let simulated = false
+
+        /**
+         * One at a time on purpose. SMS gateways rate-limit hard and bill per
+         * message; a burst of parallel requests gets throttled or silently
+         * dropped, and there is no way to tell which afterwards.
+         */
+        for (const phone of phones) {
+          const result = await sendSms(phone, body)
+          if (result.ok) {
+            sent += 1
+            if (result.simulated) simulated = true
+          } else {
+            failed += 1
+          }
+          campaign.stats.sent = sent
+          campaign.stats.failed = failed
+          if ((sent + failed) % 10 === 0) await campaign.save()
+        }
+
+        campaign.status = failed === phones.length ? 'failed' : 'sent'
+        campaign.sentAt = new Date()
+        campaign.stats.simulated = simulated
+        await campaign.save()
+      })().catch((error) => console.error('[campaign] sms send failed:', error.message))
+
+      return
+    }
+
+    /* ------------------------------- email ------------------------------- */
     const emails = await resolveRecipients(campaign.audience)
     if (!emails.length) throw ApiError.badRequest('This audience has no recipients')
 

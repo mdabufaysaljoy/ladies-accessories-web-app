@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { adminApi } from '@/lib/api'
+import { API_BASE, adminApi } from '@/lib/api'
 import {
   AdminPage, Badge, Btn, Card, Field, Input, Select, Spinner,
   Tabs, Textarea, Toggle, useToasts,
 } from '../components/ui'
 import { Icon } from '@/components/ui/Icon'
 import { useSettings } from '@/context/SettingsContext'
+import { formatDate } from '@/utils/format'
 
 const TABS = [
   { id: 'brand', label: 'Brand identity' },
@@ -69,26 +70,39 @@ export default function SettingsPage() {
   const [status, setStatus] = useState(null)
   const [courierStatus, setCourierStatus] = useState(null)
   const [catalogue, setCatalogue] = useState([])
+  const [pageSub, setPageSub] = useState(null)
+  const [webhookLog, setWebhookLog] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [dirty, setDirty] = useState(false)
   const { push, node } = useToasts()
+
+  /**
+   * The callback URL Meta must be given. `API_BASE` already resolves to the
+   * deployed API origin (VITE_API_URL), so this stays correct on a split-domain
+   * deploy where the admin panel and the API live on different hosts.
+   */
+  const webhookUrl = `${API_BASE.startsWith('http') ? API_BASE : window.location.origin + API_BASE}/inbox/webhook/meta`
   const { reload } = useSettings()
 
   const load = useCallback(async () => {
     try {
-      const [s, st, co, prods] = await Promise.all([
+      const [s, st, co, prods, sub, hooks] = await Promise.all([
         adminApi.get('/settings/admin'),
         adminApi.get('/settings/integration-status').catch(() => null),
         adminApi.get('/couriers').catch(() => null),
         // For the hero product pickers — active products only, since an
         // archived one would render a dead card on the homepage.
         adminApi.get('/products/admin/list?status=active&limit=300').catch(() => null),
+        adminApi.get('/inbox/messenger/subscription').catch(() => null),
+        adminApi.get('/inbox/webhook/log').catch(() => null),
       ])
       setData(s.settings)
       setStatus(st)
       setCourierStatus(co?.couriers ?? null)
       setCatalogue(prods?.products ?? [])
+      setPageSub(sub)
+      setWebhookLog(hooks)
       setDirty(false)
     } catch (err) {
       push(err.message, 'error')
@@ -145,6 +159,18 @@ export default function SettingsPage() {
         res.simulated ? 'info' : 'success',
       )
     } catch (err) {
+      push(err.message, 'error')
+    }
+  }
+
+  /** Subscribe the Facebook Page to this app's webhook. */
+  const connectPage = async () => {
+    try {
+      const res = await adminApi.post('/inbox/messenger/subscribe', {})
+      push(`Page connected — listening for ${res.fields?.length ?? 0} event types`)
+      setPageSub(await adminApi.get('/inbox/messenger/subscription').catch(() => null))
+    } catch (err) {
+      // Meta's own wording is far more useful here than anything we'd invent.
       push(err.message, 'error')
     }
   }
@@ -496,6 +522,102 @@ export default function SettingsPage() {
                 <Field label="Meta description">
                   <Textarea rows={3} value={data.seo?.metaDescription ?? ''} onChange={(e) => set('seo', { metaDescription: e.target.value })} />
                 </Field>
+              </div>
+            </Card>
+
+            <Card
+              title="Product page"
+              description="The reassurance rows and spec table under every product"
+            >
+              <div className="space-y-4">
+                <Toggle
+                  checked={data.productPage?.showAssurances !== false}
+                  onChange={(v) => set('productPage', { showAssurances: v })}
+                  label="Show the delivery / payment / returns rows"
+                />
+
+                {data.productPage?.showAssurances !== false && (
+                  <Field label="Rows">
+                    <Repeater
+                      items={data.productPage?.assurances ?? []}
+                      onChange={(v) => set('productPage', { assurances: v })}
+                      blank={{ icon: 'checkCircle', title: '', body: '', link: '', linkLabel: '', enabled: true }}
+                      addLabel="Add row"
+                      render={(item, patch) => (
+                        <div className="space-y-2">
+                          <div className="flex gap-2">
+                            <Select
+                              value={item.icon ?? 'checkCircle'}
+                              onChange={(e) => patch({ icon: e.target.value })}
+                              className="w-36 shrink-0"
+                            >
+                              {['truck', 'cash', 'refresh', 'shield', 'checkCircle', 'gift', 'leaf', 'clock'].map((ic) => (
+                                <option key={ic} value={ic}>{ic}</option>
+                              ))}
+                            </Select>
+                            <Input
+                              value={item.title ?? ''}
+                              onChange={(e) => patch({ title: e.target.value })}
+                              placeholder="Bold part — e.g. Free delivery over {freeShipping}."
+                            />
+                          </div>
+                          <Textarea
+                            rows={2}
+                            value={item.body ?? ''}
+                            onChange={(e) => patch({ body: e.target.value })}
+                            placeholder="The rest of the sentence"
+                          />
+                          <div className="flex gap-2">
+                            <Input
+                              value={item.link ?? ''}
+                              onChange={(e) => patch({ link: e.target.value })}
+                              placeholder="/policy/returns (optional link)"
+                            />
+                            <Input
+                              value={item.linkLabel ?? ''}
+                              onChange={(e) => patch({ linkLabel: e.target.value })}
+                              placeholder="Link text"
+                            />
+                          </div>
+                          <Toggle
+                            checked={item.enabled !== false}
+                            onChange={(v) => patch({ enabled: v })}
+                            label="Visible"
+                          />
+                        </div>
+                      )}
+                    />
+                  </Field>
+                )}
+
+                <div className="rounded-xl bg-blush px-4 py-3 text-[0.75rem] leading-relaxed text-ink/70">
+                  <Icon name="info" size={14} className="mr-1.5 inline text-plum" />
+                  These placeholders fill themselves in from your delivery settings, so the numbers
+                  never go stale: <code>{'{freeShipping}'}</code> the free-delivery amount,{' '}
+                  <code>{'{deliveryZones}'}</code> your zones and timings,{' '}
+                  <code>{'{returnDays}'}</code> the returns window.
+                </div>
+
+                <div className="space-y-3 border-t border-ink/10 pt-4">
+                  <Toggle
+                    checked={data.productPage?.showSpecifications !== false}
+                    onChange={(v) => set('productPage', { showSpecifications: v })}
+                    label="Show the specifications table"
+                  />
+                  <p className="text-[0.75rem] leading-relaxed text-ink/55">
+                    Built from the key / value specs you enter on each product, under
+                    Description &amp; specs.
+                  </p>
+                  {data.productPage?.showSpecifications !== false && (
+                    <Field label="Table heading">
+                      <Input
+                        value={data.productPage?.specificationsTitle ?? ''}
+                        onChange={(e) => set('productPage', { specificationsTitle: e.target.value })}
+                        placeholder="Specifications"
+                      />
+                    </Field>
+                  )}
+                </div>
               </div>
             </Card>
 
@@ -1129,14 +1251,73 @@ export default function SettingsPage() {
             </div>
             <div className="mt-4 rounded-lg bg-sand px-3.5 py-3">
               <p className="text-[0.75rem] font-medium">Webhook callback URL</p>
+              {/* Built from the configured API origin, not from the browser's.
+                  Guessing it by swapping a dev port printed the *storefront*
+                  domain in production, which Meta cannot verify. */}
               <code className="mt-1 block break-all font-mono text-[0.75rem] text-ink/60">
-                {window.location.origin.replace('5173', '4000')}/api/inbox/webhook/meta
+                {webhookUrl}
               </code>
-              <p className="mt-1.5 text-[0.6875rem] text-ink/45">
-                Paste this into Meta → Webhooks. It must be publicly reachable over HTTPS in production
-                (use ngrok or similar for local testing).
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <Btn
+                  size="xs"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(webhookUrl)
+                      push('Callback URL copied')
+                    } catch {
+                      push('Could not copy — select it manually', 'error')
+                    }
+                  }}
+                >
+                  <Icon name="grid" size={12} /> Copy URL
+                </Btn>
+              </div>
+              <p className="mt-2 text-[0.6875rem] leading-relaxed text-ink/45">
+                Paste this exactly into Meta → Webhooks, including the <code>/api</code> part. It must
+                be publicly reachable over HTTPS in production (use ngrok or similar for local testing).
               </p>
             </div>
+          </Card>
+
+          <Card
+            title="Webhook deliveries"
+            description="What Meta has actually sent this server in the last 7 days"
+            actions={
+              <Btn
+                size="xs"
+                variant="ghost"
+                onClick={async () => setWebhookLog(await adminApi.get('/inbox/webhook/log').catch(() => null))}
+              >
+                <Icon name="refresh" size={12} /> Refresh
+              </Btn>
+            }
+          >
+            {!webhookLog?.events?.length ? (
+              <div className="rounded-xl bg-gold/10 px-4 py-3 text-[0.8125rem] leading-relaxed text-ink/75">
+                <Icon name="alert" size={14} className="mr-1.5 inline text-gold" />
+                Meta has not called this server yet. Verifying the webhook is not enough on its own —
+                subscribe the webhook to the <strong>messages</strong> field in Meta, then press
+                “Connect Page to webhook” below. If it is still empty after sending yourself a test
+                message, Meta is not reaching this server at all.
+              </div>
+            ) : (
+              <ul className="space-y-2">
+                {webhookLog.events.slice(0, 8).map((e) => (
+                  <li key={e._id} className="rounded-xl border border-ink/10 p-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge tone={e.status === 'accepted' ? (e.ingested > 0 ? 'success' : 'warning') : 'danger'}>
+                        {e.status === 'accepted' ? (e.ingested > 0 ? `${e.ingested} message` : 'nothing to store') : 'rejected'}
+                      </Badge>
+                      <span className="text-[0.75rem] text-ink/45">{e.object || 'unknown'}</span>
+                      <span className="ml-auto text-[0.75rem] text-ink/45">{formatDate(e.createdAt)}</span>
+                    </div>
+                    {e.reason && (
+                      <p className="mt-1.5 text-[0.75rem] leading-relaxed text-ink/65">{e.reason}</p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
           </Card>
 
           <div className="grid gap-4 lg:grid-cols-3">
@@ -1173,6 +1354,26 @@ export default function SettingsPage() {
                   value={data.integrations.meta.messenger.pageAccessToken}
                   onChange={(v) => setDeep('integrations', 'meta', { messenger: { ...data.integrations.meta.messenger, pageAccessToken: v } })}
                 />
+
+                {/* Verifying the webhook is not enough on its own — the Page
+                    has to be subscribed to it before any message arrives. */}
+                <div className="border-t border-ink/10 pt-3.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Btn size="sm" onClick={connectPage} disabled={dirty}>
+                      <Icon name="whatsapp" size={13} /> Connect Page to webhook
+                    </Btn>
+                    {pageSub && (
+                      <Badge tone={pageSub.subscribed ? 'success' : 'warning'}>
+                        {pageSub.subscribed ? 'Subscribed' : 'Not subscribed'}
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="mt-2 text-[0.75rem] leading-relaxed text-ink/55">
+                    {dirty
+                      ? 'Save your changes first, then connect.'
+                      : 'Required step. Until the Page is subscribed, Messenger delivers nothing even with a verified webhook.'}
+                  </p>
+                </div>
               </div>
             </Card>
 

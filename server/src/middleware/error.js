@@ -29,6 +29,21 @@ export const errorHandler = (err, _req, res, _next) => {
     message = `That ${field} is already in use`
   }
 
+  /**
+   * Multer rejects an oversized or over-count upload with its own error class.
+   * Left to the generic handler it surfaces as a bare 500 "File too large",
+   * which tells the shop owner nothing about what to do next.
+   */
+  if (err.name === 'MulterError') {
+    status = 413
+    const messages = {
+      LIMIT_FILE_SIZE: 'That file is too large. Please upload an image under 12 MB.',
+      LIMIT_FILE_COUNT: 'Too many files at once — please upload 5 or fewer.',
+      LIMIT_UNEXPECTED_FILE: 'Unexpected file field in the upload.',
+    }
+    message = messages[err.code] ?? `Upload rejected (${err.code})`
+  }
+
   if (err.name === 'ZodError') {
     status = 400
     message = 'Validation failed'

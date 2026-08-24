@@ -8,7 +8,7 @@ import { PageHeader, usePageMeta } from '@/components/common/PageShell'
 import { useSettings, useWhatsAppLink } from '@/context/SettingsContext'
 import { FAQS as FALLBACK_FAQS } from '@/data/content'
 import { useStore } from '@/context/StoreContext'
-import { cx, isValidBdPhone, isValidEmail } from '@/utils/format'
+import { cx, isValidBdPhone, isValidEmail, sanitisePhoneInput } from '@/utils/format'
 
 const TOPICS = [
   'Order status',
@@ -54,8 +54,14 @@ export default function Contact() {
 
   usePageMeta('Contact us', 'Questions about an order, a return or which product suits you? Talk to us.')
 
+  /**
+   * Phone boxes only ever hold what a phone number can contain. Stripping as
+   * the shopper types means a field can never be submitted full of letters —
+   * `isValidBdPhone` still checks the shape on submit.
+   */
   const set = (key) => (e) => {
-    setForm((f) => ({ ...f, [key]: e.target.value }))
+    const value = /phone/i.test(key) ? sanitisePhoneInput(e.target.value) : e.target.value
+    setForm((f) => ({ ...f, [key]: value }))
     setErrors((x) => ({ ...x, [key]: undefined }))
   }
 

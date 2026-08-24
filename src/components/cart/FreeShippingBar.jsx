@@ -1,10 +1,17 @@
 import { Icon } from '@/components/ui/Icon'
 import { useSettings } from '@/context/SettingsContext'
-import { taka } from '@/utils/format'
+import { freeShippingThreshold, taka } from '@/utils/format'
 
 export function FreeShippingBar({ subtotal }) {
   const { delivery } = useSettings()
-  const threshold = delivery.freeShippingThreshold ?? 2000
+  const threshold = freeShippingThreshold(delivery)
+
+  /**
+   * Nothing to promise when the shop charges delivery on every order — and a
+   * threshold of 0 would divide by zero for the progress bar anyway.
+   */
+  if (threshold <= 0) return null
+
   const pct = Math.min(100, (subtotal / threshold) * 100)
   const remaining = Math.max(0, threshold - subtotal)
   const unlocked = remaining === 0

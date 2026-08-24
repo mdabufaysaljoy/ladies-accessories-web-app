@@ -15,7 +15,7 @@ const NAV = [
   { to: '/admin/inbox', label: 'Inbox', icon: 'whatsapp', ability: 'inbox', badge: 'unreadChats' },
   { to: '/admin/customers', label: 'Customers', icon: 'user', ability: 'customers' },
   { to: '/admin/reviews', label: 'Reviews', icon: 'checkCircle', ability: 'products', badge: 'pendingReviews' },
-  { to: '/admin/campaigns', label: 'Email', icon: 'mail', ability: 'campaigns' },
+  { to: '/admin/campaigns', label: 'Campaigns', icon: 'mail', ability: 'campaigns' },
   { to: '/admin/coupons', label: 'Coupons', icon: 'gift', ability: 'coupons' },
   { to: '/admin/offers', label: 'Offers', icon: 'sparkle', ability: 'settings' },
   { to: '/admin/media', label: 'Media', icon: 'eye', ability: 'media' },

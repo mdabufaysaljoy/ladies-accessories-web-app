@@ -26,7 +26,14 @@ const ALLOWED = new Set([
  */
 export const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 12 * 1024 * 1024, files: 10 },
+  /**
+   * 12 MB covers any phone photo. The file count is capped at 5 because
+   * memoryStorage holds every file of a batch in RAM at once, and this ships
+   * on a 1 GB VPS — 5 x 12 MB is the worst case Nginx is configured to pass
+   * through (`client_max_body_size` in deploy/nginx-api.conf). Raise one and
+   * you must raise the other, or uploads fail as a misleading CORS error.
+   */
+  limits: { fileSize: 12 * 1024 * 1024, files: 5 },
   fileFilter: (_req, file, cb) => {
     if (!ALLOWED.has(file.mimetype)) {
       return cb(ApiError.badRequest(`Unsupported file type: ${file.mimetype}`))
@@ -53,8 +60,8 @@ export const importUpload = multer({
      * a risk worth a false rejection.
      */
     const name = file.originalname.toLowerCase()
-    if (!name.endsWith('.csv') && !name.endsWith('.json')) {
-      return cb(ApiError.badRequest('Please upload a .csv or .json file'))
+    if (!/\.(csv|json|xlsx)$/.test(name)) {
+      return cb(ApiError.badRequest('Please upload a .csv, .xlsx or .json file'))
     }
     cb(null, true)
   },

@@ -5,9 +5,10 @@ import { Customer } from '../models/Customer.js'
 import { Settings } from '../models/Settings.js'
 import { requireAuth, requireAbility } from '../middleware/auth.js'
 import { ApiError, asyncHandler, paginate, meta, normalizeBdPhone } from '../utils/helpers.js'
-import { sendMessage, channelStatus, ingestWebhook, metaConfig } from '../services/meta.js'
+import { sendMessage, channelStatus, ingestWebhook, metaConfig, subscribePageToWebhook, pageSubscriptionStatus } from '../services/meta.js'
 import { verifyMetaSignature, safeEqual } from '../utils/crypto.js'
 import { env } from '../config/env.js'
+import { WebhookEvent } from '../models/WebhookEvent.js'
 
 const router = Router()
 
@@ -40,10 +41,24 @@ router.post(
   '/webhook/meta',
   asyncHandler(async (req, res) => {
     const cfg = await metaConfig()
+    const preview = JSON.stringify(req.body ?? {})
+    const object = req.body?.object ?? ''
 
     if (cfg.appSecret) {
       const signature = req.get('x-hub-signature-256')
       if (!verifyMetaSignature(req.rawBody ?? Buffer.from(''), signature, cfg.appSecret)) {
+        /**
+         * The commonest real cause of "the webhook is connected but nothing
+         * arrives": the App Secret saved here is not the one the Facebook app
+         * signs with. Returning a bare 401 leaves the shop owner with an empty
+         * inbox and nothing to go on, so say it loudly and keep a record they
+         * can read in the admin panel.
+         */
+        const reason = signature
+          ? 'Signature did not match the saved App Secret — check Settings → Integrations → Meta app.'
+          : 'No X-Hub-Signature-256 header on the request.'
+        console.error('[inbox] webhook REJECTED:', reason)
+        await WebhookEvent.record({ object, status: 'rejected', reason, preview })
         return res.sendStatus(401)
       }
     }
@@ -51,9 +66,20 @@ router.post(
     // Always 200 quickly — Meta retries aggressively on anything else.
     res.sendStatus(200)
     try {
-      await ingestWebhook(req.body)
+      const created = await ingestWebhook(req.body)
+      const ingested = created.length
+      await WebhookEvent.record({
+        object,
+        status: 'accepted',
+        ingested,
+        // A delivery that produces nothing is worth flagging: usually a read
+        // receipt or an echo of the shop's own reply, not a customer message.
+        reason: ingested === 0 ? 'Accepted, but contained no new inbound message.' : '',
+        preview,
+      })
     } catch (error) {
       console.error('[inbox] webhook ingest failed:', error.message)
+      await WebhookEvent.record({ object, status: 'rejected', reason: `Ingest failed: ${error.message}`, preview })
     }
   }),
 )
@@ -61,6 +87,39 @@ router.post(
 /* --------------------------------- admin --------------------------------- */
 
 router.use(requireAuth, requireAbility('inbox'))
+
+/**
+ * Connect the Facebook Page to this app's webhook.
+ *
+ * Kept as an explicit button rather than something done silently on save: it
+ * changes configuration inside the shop's own Meta account, and the result
+ * (including Meta's own error text) is what tells them why Messenger is or is
+ * not working.
+ */
+/** Recent inbound webhook deliveries, so a silent failure becomes visible. */
+router.get(
+  '/webhook/log',
+  asyncHandler(async (_req, res) => {
+    const events = await WebhookEvent.find().sort('-createdAt').limit(25)
+    res.json({ events, everReceived: events.length > 0 })
+  }),
+)
+
+router.post(
+  '/messenger/subscribe',
+  asyncHandler(async (_req, res) => {
+    const result = await subscribePageToWebhook()
+    res.status(result.ok ? 200 : 400).json(result)
+  }),
+)
+
+router.get(
+  '/messenger/subscription',
+  asyncHandler(async (_req, res) => {
+    res.json(await pageSubscriptionStatus())
+  }),
+)
+
 
 router.get(
   '/status',
@@ -126,7 +185,26 @@ router.get(
         .limit(5)
     }
 
-    res.json({ conversation: convo, orders })
+    /**
+     * Where an admin can actually see this person.
+     *
+     * Facebook does not expose a public profile URL for a page-scoped ID, so
+     * there is nothing to link a Messenger PSID to on facebook.com. What does
+     * work is opening the thread in Meta's own inbox, which is computed here
+     * because it needs the Page ID from settings. Instagram is different — a
+     * username is a real public handle.
+     */
+    const cfg = await metaConfig()
+    let threadUrl = null
+    if (convo.channel === 'instagram' && convo.contact?.username) {
+      threadUrl = `https://www.instagram.com/${encodeURIComponent(convo.contact.username)}/`
+    } else if (convo.channel === 'messenger' && cfg.messenger.pageId) {
+      threadUrl =
+        `https://business.facebook.com/latest/inbox/all?asset_id=${encodeURIComponent(cfg.messenger.pageId)}` +
+        `&thread_id=${encodeURIComponent(convo.externalId)}`
+    }
+
+    res.json({ conversation: { ...convo.toObject(), threadUrl }, orders })
   }),
 )
 

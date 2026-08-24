@@ -13,6 +13,13 @@ const loginLimiter = rateLimit({
   limit: 10,
   standardHeaders: true,
   legacyHeaders: false,
+  /**
+   * Only failed attempts count. The limiter exists to slow down password
+   * guessing, and a successful sign-in is not a guess — without this, an admin
+   * who signs in from a few devices, or mistypes once and then gets it right,
+   * spends the rest of the window locked out of their own shop.
+   */
+  skipSuccessfulRequests: true,
   message: { error: 'Too many sign-in attempts. Try again in 15 minutes.' },
 })
 

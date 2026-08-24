@@ -13,7 +13,7 @@ import { getPixelIds, trackBeginCheckout } from '@/lib/tracking'
 
 import { useStore } from '@/context/StoreContext'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
-import { cx, isValidBdPhone, isValidEmail, taka } from '@/utils/format'
+import { cx, isValidBdPhone, isValidEmail, sanitisePhoneInput, taka } from '@/utils/format'
 
 const STEPS = [
   { id: 1, label: 'Information' },
@@ -245,8 +245,14 @@ export default function Checkout() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lines.length])
 
+  /**
+   * Phone boxes only ever hold what a phone number can contain. Stripping as
+   * the shopper types means a field can never be submitted full of letters —
+   * `isValidBdPhone` still checks the shape on submit.
+   */
   const set = (key) => (e) => {
-    const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value
+    const raw = e.target.type === 'checkbox' ? e.target.checked : e.target.value
+    const value = /phone/i.test(key) ? sanitisePhoneInput(raw) : raw
     setForm((f) => ({ ...f, [key]: value }))
     setErrors((x) => ({ ...x, [key]: undefined }))
   }

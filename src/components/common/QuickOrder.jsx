@@ -10,7 +10,7 @@ import { getPixelIds } from '@/lib/tracking'
 import { useSettings } from '@/context/SettingsContext'
 import { useStore } from '@/context/StoreContext'
 import { useEscape, useScrollLock } from '@/hooks/useScrollLock'
-import { cx, isValidBdPhone, taka } from '@/utils/format'
+import { cx, isValidBdPhone, qualifiesForFreeShipping, sanitisePhoneInput, taka } from '@/utils/format'
 
 /**
  * One-step order form — name, phone, address, done.
@@ -39,7 +39,7 @@ export function QuickOrder({ product, open, onClose, color, size, initialQty = 1
   const sizeOption = product.sizes?.find((s) => s.label === size)
   const unitPrice = product.price + (sizeOption?.priceDelta ?? 0)
   const subtotal = unitPrice * qty
-  const freeShipping = subtotal >= (delivery.freeShippingThreshold ?? 2000)
+  const freeShipping = qualifiesForFreeShipping(subtotal, delivery)
   const shipping = freeShipping ? 0 : (zone?.charge ?? 0)
   const total = subtotal + shipping
 
@@ -153,7 +153,7 @@ export function QuickOrder({ product, open, onClose, color, size, initialQty = 1
               </span>
               <input
                 value={form.phone}
-                onChange={(e) => { setForm((f) => ({ ...f, phone: e.target.value })); setErrors((x) => ({ ...x, phone: undefined })) }}
+                onChange={(e) => { setForm((f) => ({ ...f, phone: sanitisePhoneInput(e.target.value) })); setErrors((x) => ({ ...x, phone: undefined })) }}
                 placeholder="01XXXXXXXXX"
                 inputMode="tel"
                 autoComplete="tel"

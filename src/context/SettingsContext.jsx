@@ -54,6 +54,12 @@ const FALLBACK = {
   policies: [],
   seo: {},
   analytics: {},
+  productPage: {
+    showAssurances: true,
+    showSpecifications: true,
+    specificationsTitle: 'Specifications',
+    assurances: [],
+  },
   checkout: {
     altPhone: 'optional',
     email: 'optional',
@@ -143,6 +149,8 @@ export function SettingsProvider({ children }) {
       policies: settings.policies ?? [],
       /** Public tracking IDs only — the CAPI token never leaves the server. */
       analytics: settings.analytics ?? FALLBACK.analytics,
+      /** Product-page presentation — assurance rows and the spec table. */
+      productPage: { ...FALLBACK.productPage, ...(settings.productPage ?? {}) },
       /** Which fields the checkout asks for — see Settings → Checkout form. */
       checkout: { ...FALLBACK.checkout, ...(settings.checkout ?? {}) },
     }),

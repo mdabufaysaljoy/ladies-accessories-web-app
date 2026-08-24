@@ -486,6 +486,74 @@ const csvCell = (value) => {
   return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
 }
 
+/**
+ * Export columns, deliberately the same names the importer accepts.
+ *
+ * That symmetry is the whole point: a shop can export the catalogue, edit
+ * prices in Excel, and import the same file straight back without renaming a
+ * single header.
+ */
+export const PRODUCT_EXPORT_COLUMNS = [
+  { header: 'name', key: 'name', width: 34 },
+  { header: 'sku', key: 'sku' },
+  { header: 'slug', key: 'slug', width: 28 },
+  { header: 'category', key: 'category' },
+  { header: 'subcategory', key: 'subcategory' },
+  { header: 'price', key: 'price' },
+  { header: 'compareAt', key: 'compareAt' },
+  { header: 'costPrice', key: 'costPrice' },
+  { header: 'stock', key: 'stock' },
+  { header: 'status', key: 'status' },
+  { header: 'featured', key: 'featured' },
+  { header: 'badge', key: 'badge' },
+  { header: 'short', key: 'short', width: 40 },
+  { header: 'description', key: 'description', width: 50 },
+  { header: 'care', key: 'care', width: 30 },
+  { header: 'details', key: 'details', width: 40 },
+  { header: 'specifications', key: 'specifications', width: 40 },
+  { header: 'colors', key: 'colors', width: 30 },
+  { header: 'sizes', key: 'sizes', width: 30 },
+  { header: 'tags', key: 'tags' },
+  { header: 'images', key: 'images', width: 40 },
+  { header: 'videos', key: 'videos', width: 30 },
+  { header: 'rating', key: 'rating' },
+  { header: 'reviewCount', key: 'reviewCount' },
+  { header: 'soldCount', key: 'soldCount' },
+]
+
+/** Flattens a product document into the pipe-separated shape the importer reads. */
+export function productToRow(p) {
+  const list = (arr) => (arr ?? []).join(' | ')
+  return {
+    name: p.name ?? '',
+    sku: p.sku ?? '',
+    slug: p.slug ?? '',
+    category: p.category ?? '',
+    subcategory: p.subcategory ?? '',
+    price: p.price ?? 0,
+    compareAt: p.compareAt ?? 0,
+    costPrice: p.costPrice ?? 0,
+    stock: p.stock ?? 0,
+    status: p.status ?? 'active',
+    featured: p.featured ? 'true' : 'false',
+    badge: p.badge ?? '',
+    short: p.short ?? '',
+    description: p.description ?? '',
+    care: p.care ?? '',
+    details: list(p.details),
+    specifications: (p.specifications ?? []).map((sp) => `${sp.label}=${sp.value}`).join(' | '),
+    colors: (p.colors ?? []).map((c) => `${c.name}:${c.hex}:${c.stock ?? 0}`).join(' | '),
+    sizes: (p.sizes ?? []).map((z) => `${z.label}:${z.priceDelta ?? 0}:${z.stock ?? 0}`).join(' | '),
+    tags: list(p.tags),
+    images: (p.images ?? []).map((i) => i.url).join(' | '),
+    videos: (p.videos ?? []).map((v) => v.url).join(' | '),
+    // Read-only in the importer; exported so the shop can analyse them.
+    rating: p.rating ?? 0,
+    reviewCount: p.reviewCount ?? 0,
+    soldCount: p.soldCount ?? 0,
+  }
+}
+
 export function buildTemplate(format = 'csv') {
   if (format === 'json') {
     return JSON.stringify([SAMPLE_ROW], null, 2)

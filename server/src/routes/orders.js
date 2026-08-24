@@ -12,6 +12,7 @@ import { logActivity } from '../models/ActivityLog.js'
 import { sendOrderEmail, sendOrderPlacedEmail, sendNewOrderAdminEmail } from '../services/mailer.js'
 import { trackPurchase } from '../services/pixel.js'
 import { ensureInvoice, renderInvoiceHtml } from '../services/invoice.js'
+import { measureSms, renderOrderSms, sendSms, smsConfig } from '../services/sms.js'
 import * as couriers from '../services/couriers/index.js'
 import { optionalCustomer } from '../middleware/customerAuth.js'
 
@@ -104,8 +105,15 @@ export async function buildOrderTotals({ lines, zoneId, couponCode }) {
     zones.find((z) => z.enabled !== false) ??
     zones[0] ?? { id: 'outside', label: 'Outside Dhaka', charge: 130, eta: '2–4 working days' }
 
+  /**
+   * A threshold of 0 means "never give free delivery", not "give it to
+   * everyone". Comparing `subtotal >= 0` is always true, so the old rule
+   * shipped every order free the moment the shop tried to turn the offer off.
+   * A coupon can still grant free shipping independently.
+   */
+  const freeThreshold = Number(settings.delivery.freeShippingThreshold) || 0
   const freeShipping =
-    subtotal >= settings.delivery.freeShippingThreshold ||
+    (freeThreshold > 0 && subtotal >= freeThreshold) ||
     (coupon?.type === 'shipping' && subtotal >= coupon.minSpend)
 
   const shipping = freeShipping ? 0 : zone.charge
@@ -658,6 +666,80 @@ router.post(
     }
 
     res.json({ result })
+  }),
+)
+
+/* ------------------------------- order SMS ------------------------------- */
+
+/** The saved templates, pre-filled for this order and measured. */
+router.get(
+  '/:id/sms',
+  requireAuth,
+  requireAbility('orders'),
+  asyncHandler(async (req, res) => {
+    const order = await Order.findById(req.params.id)
+    if (!order) throw ApiError.notFound('Order not found')
+
+    const cfg = await smsConfig()
+    const settings = await Settings.getSingleton()
+    const templates = (settings.integrations?.sms?.orderTemplates ?? []).map((t) => {
+      const text = renderOrderSms(t.text, order)
+      return { label: t.label, text, ...measureSms(text) }
+    })
+
+    res.json({
+      templates,
+      history: order.smsLog ?? [],
+      phone: order.customer?.phone ?? '',
+      configured: cfg.enabled && Boolean(cfg.apiKey),
+      provider: cfg.provider,
+    })
+  }),
+)
+
+/**
+ * Sends one SMS about this order.
+ *
+ * The message is measured server-side as well as in the browser: an SMS is
+ * billed per 160-character part (70 if it contains any Bangla), and a shop
+ * should not discover a three-part message on its invoice. Over-long messages
+ * are allowed but reported, never silently truncated — cutting an address or a
+ * tracking number in half would be worse than a slightly larger bill.
+ */
+router.post(
+  '/:id/sms',
+  requireAuth,
+  requireAbility('orders'),
+  asyncHandler(async (req, res) => {
+    const order = await Order.findById(req.params.id)
+    if (!order) throw ApiError.notFound('Order not found')
+
+    const text = String(req.body?.text ?? '').trim()
+    if (!text) throw ApiError.badRequest('Write a message first')
+    if (text.length > 700) throw ApiError.badRequest('That message is too long to send as SMS')
+
+    const measured = measureSms(text)
+    const result = await sendSms(order.customer?.phone, text)
+
+    order.smsLog.push({
+      text,
+      to: result.to ?? order.customer?.phone,
+      parts: measured.parts,
+      status: result.ok ? (result.simulated ? 'simulated' : 'sent') : 'failed',
+      error: result.ok ? '' : (result.error ?? ''),
+      by: req.user.name,
+    })
+    await order.save()
+
+    if (result.ok) {
+      await logActivity({
+        actor: req.user._id, actorName: req.user.name,
+        action: 'order.sms', entity: 'Order', entityId: String(order._id),
+        summary: `SMS to ${order.customer?.name ?? order.customer?.phone} about ${order.orderNumber}`,
+      })
+    }
+
+    res.status(result.ok ? 200 : 400).json({ ...result, measured, history: order.smsLog })
   }),
 )
 

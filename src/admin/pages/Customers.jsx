@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { adminApi, qs } from '@/lib/api'
+import { adminApi, qs, downloadAdminFile } from '@/lib/api'
 import {
   AdminPage, Badge, Btn, Card, EmptyRow, Pagination, SearchInput,
   Select, Spinner, Table, Td, useToasts,
@@ -15,6 +15,20 @@ export default function Customers() {
   const [segment, setSegment] = useState('')
   const [page, setPage] = useState(1)
   const { push, node } = useToasts()
+
+  /**
+   * A customer export is a list of names, numbers and addresses, so the
+   * download is authenticated with the admin token rather than being a plain
+   * link anyone could share. The server logs every export.
+   */
+  const exportCustomers = async (format) => {
+    try {
+      await downloadAdminFile(`/customers/export${qs({ format, q, segment })}`, `customers.${format}`)
+      push(`Exported as ${format.toUpperCase()}`)
+    } catch (err) {
+      push(err.message, 'error')
+    }
+  }
 
   const load = useCallback(async () => {
     try {
@@ -41,7 +55,25 @@ export default function Customers() {
   }
 
   return (
-    <AdminPage title="Customers" subtitle={data ? `${data.meta.total} customers` : 'Loading…'}>
+    <AdminPage
+      title="Customers"
+      subtitle={data ? `${data.meta.total} customers` : 'Loading…'}
+      actions={
+        /* Exports follow the search and segment filters, so a shop can pull
+           just its VIPs rather than the whole list every time. */
+        <Select
+          value=""
+          onChange={(e) => e.target.value && exportCustomers(e.target.value)}
+          className="w-auto"
+          aria-label="Export customers"
+        >
+          <option value="">Export…</option>
+          <option value="xlsx">Excel (.xlsx)</option>
+          <option value="csv">CSV</option>
+          <option value="json">JSON</option>
+        </Select>
+      }
+    >
       {node}
 
       <Card padded={false}>

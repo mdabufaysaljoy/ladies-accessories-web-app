@@ -122,3 +122,45 @@ export const qs = (params) => {
   const str = search.toString()
   return str ? `?${str}` : ''
 }
+
+/**
+ * Downloads an admin file (an export) and hands it to the browser.
+ *
+ * This deliberately mirrors how `request` authenticates rather than rolling
+ * its own headers. The server accepts either a bearer token or the
+ * `gbs_admin_token` cookie, but the header takes precedence — so sending
+ * `Bearer null` when localStorage happens to be empty actively blocks the
+ * cookie fallback and turns a working session into a 401. Set the header only
+ * when there is a token, and send credentials so the cookie can do its job.
+ */
+export async function downloadAdminFile(path, fallbackName) {
+  const headers = {}
+  const token = getToken()
+  if (token) headers.Authorization = `Bearer ${token}`
+
+  const res = await fetch(`${BASE}/api${path}`, { headers, credentials: 'include' })
+
+  if (!res.ok) {
+    // Surface the server's own wording — "Session expired" is actionable in a
+    // way that a flat "Export failed" is not.
+    let message = `Export failed (${res.status})`
+    try {
+      const body = await res.json()
+      if (body?.error) message = body.error
+    } catch {
+      /* not JSON — keep the status-based message */
+    }
+    throw new Error(message)
+  }
+
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download =
+    (res.headers.get('content-disposition') ?? '').match(/filename="?([^"]+)"?/)?.[1] ?? fallbackName
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}

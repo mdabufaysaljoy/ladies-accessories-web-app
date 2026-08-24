@@ -8,7 +8,7 @@ import { useWhatsAppLink } from '@/context/SettingsContext'
 import { useAccount } from '@/context/AccountContext'
 import { useStore } from '@/context/StoreContext'
 import { api, API_BASE } from '@/lib/api'
-import { cx, formatDate, taka } from '@/utils/format'
+import { cx, formatDate, sanitisePhoneInput, taka } from '@/utils/format'
 
 /** The happy path, in order. A cancelled/returned order leaves this track. */
 const FLOW = [
@@ -117,7 +117,7 @@ export default function TrackOrder() {
               />
               <input
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => setPhone(sanitisePhoneInput(e.target.value))}
                 placeholder="01XXXXXXXXX"
                 aria-label="Mobile number used to order"
                 inputMode="tel"

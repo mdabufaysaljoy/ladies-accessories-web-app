@@ -8,7 +8,7 @@ import { API_BASE } from '@/lib/api'
 import { useSettings } from '@/context/SettingsContext'
 import { MyReviews } from '@/components/review/MyReviews'
 import { DISTRICTS } from '@/data/content'
-import { cx, formatDate, isValidBdPhone, taka } from '@/utils/format'
+import { cx, formatDate, isValidBdPhone, sanitisePhoneInput, taka } from '@/utils/format'
 
 const STATUS_TONE = {
   pending: 'bg-gold/15 text-gold',
@@ -38,8 +38,10 @@ function AddressForm({ initial, zones, defaults, onCancel, onSave }) {
   const [errors, setErrors] = useState({})
   const [serverError, setServerError] = useState('')
 
+  /** Phone boxes hold digits only; the shape is still checked on submit. */
   const set = (k) => (e) => {
-    setForm((f) => ({ ...f, [k]: e.target.value }))
+    const value = /phone/i.test(k) ? sanitisePhoneInput(e.target.value) : e.target.value
+    setForm((f) => ({ ...f, [k]: value }))
     setErrors((x) => ({ ...x, [k]: undefined }))
     setServerError('')
   }

@@ -145,6 +145,23 @@ const orderSchema = new mongoose.Schema(
     status: { type: String, enum: ORDER_STATUSES, default: 'pending', index: true },
     timeline: [timelineSchema],
 
+    /**
+     * Every SMS sent to this customer about this order. Kept on the order so
+     * the team can see what the shopper has already been told before sending
+     * another one — SMS costs money per part and repeats annoy people.
+     */
+    smsLog: [
+      {
+        text: String,
+        to: String,
+        parts: { type: Number, default: 1 },
+        status: { type: String, enum: ['sent', 'simulated', 'failed'], default: 'sent' },
+        error: { type: String, default: '' },
+        by: String,
+        at: { type: Date, default: Date.now },
+      },
+    ],
+
     /** Repeat COD refusers are a real cost in BD — flag them at confirmation. */
     riskFlag: { type: String, enum: ['none', 'watch', 'blocked'], default: 'none' },
     internalNotes: String,

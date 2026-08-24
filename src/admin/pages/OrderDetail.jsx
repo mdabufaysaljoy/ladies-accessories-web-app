@@ -26,11 +26,69 @@ export default function OrderDetail() {
   const [loadError, setLoadError] = useState('')
   const [busy, setBusy] = useState(false)
   const [payModal, setPayModal] = useState(false)
+  const [sms, setSms] = useState(null)
+  const [smsText, setSmsText] = useState('')
+  const [smsBusy, setSmsBusy] = useState(false)
+  const [smsError, setSmsError] = useState('')
   const [shipModal, setShipModal] = useState(false)
   const [notifyEmail, setNotifyEmail] = useState(true)
   const [notes, setNotes] = useState('')
   const [couriers, setCouriers] = useState([])
   const [courierBusy, setCourierBusy] = useState(false)
+
+  /**
+   * A single GSM-7 SMS is 160 characters; any Bangla, emoji or ৳ sign flips it
+   * to Unicode where one part is 70. Measured here so the cost is visible
+   * before sending, not after.
+   */
+  const smsMeasure = (() => {
+    const gsm =
+      "@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !\"#¤%&'()*+,-./0123456789:;<=>?" +
+      '¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà' +
+      '^{}\\[~]|€'
+    const chars = [...smsText]
+    const unicode = chars.some((c) => !gsm.includes(c))
+    const limit = unicode ? 70 : 160
+    const perMulti = unicode ? 67 : 153
+    const length = chars.length
+    return {
+      length,
+      unicode,
+      limit,
+      parts: length === 0 ? 0 : length <= limit ? 1 : Math.ceil(length / perMulti),
+    }
+  })()
+
+  const loadSms = useCallback(async () => {
+    setSmsError('')
+    try {
+      setSms(await adminApi.get(`/orders/${id}/sms`))
+    } catch (err) {
+      /**
+       * `sms` stays null on failure, and null is also the loading state — so
+       * without a separate error the card spins for ever and looks like a slow
+       * network rather than a request that already came back 404 or 502.
+       */
+      setSms(null)
+      setSmsError(err.message || 'Could not load the SMS panel')
+    }
+  }, [id])
+
+  const sendOrderSms = async () => {
+    setSmsBusy(true)
+    try {
+      const res = await adminApi.post(`/orders/${id}/sms`, { text: smsText })
+      push(res.simulated ? 'SMS simulated — add an API key to send for real' : 'SMS sent', res.simulated ? 'info' : 'success')
+      setSmsText('')
+      setSms((prev) => (prev ? { ...prev, history: res.history } : prev))
+    } catch (err) {
+      // The gateway's own wording is more useful than anything we could invent.
+      push(err.message, 'error')
+      loadSms()
+    } finally {
+      setSmsBusy(false)
+    }
+  }
 
   const load = useCallback(async () => {
     try {
@@ -45,7 +103,10 @@ export default function OrderDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    load()
+    loadSms()
+  }, [load, loadSms])
 
   useEffect(() => {
     adminApi.get('/couriers').then((d) => setCouriers(d.couriers)).catch(() => {})
@@ -273,6 +334,81 @@ export default function OrderDetail() {
                 <dd className="font-display text-xl">{taka(order.totals.total)}</dd>
               </div>
             </dl>
+          </Card>
+
+          {/* Order SMS — the fastest way to reach a Bangladeshi customer,
+              and the one channel that reliably gets read before delivery. */}
+          <Card
+            title="Send SMS"
+            description={sms?.configured ? `via ${sms.provider}` : 'Not configured — messages are simulated'}
+          >
+            {smsError ? (
+              <div className="space-y-2.5">
+                <p className="rounded-lg bg-red-50 px-3.5 py-3 text-[0.8125rem] text-red-700">
+                  {smsError}
+                </p>
+                <Btn size="xs" onClick={loadSms}>Try again</Btn>
+              </div>
+            ) : !sms ? (
+              <Spinner />
+            ) : (
+              <div className="space-y-3">
+                <div className="flex flex-wrap gap-1.5">
+                  {sms.templates.map((t) => (
+                    <Btn key={t.label} size="xs" onClick={() => setSmsText(t.text)}>
+                      {t.label}
+                    </Btn>
+                  ))}
+                </div>
+
+                <Textarea
+                  rows={3}
+                  value={smsText}
+                  onChange={(e) => setSmsText(e.target.value)}
+                  placeholder="Write a short update for the customer…"
+                />
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge tone={smsMeasure.parts > 1 ? 'warning' : 'neutral'}>
+                    {smsMeasure.length}/{smsMeasure.limit} · {smsMeasure.parts || 0} SMS
+                  </Badge>
+                  <span className="text-[0.75rem] text-ink/50">to {sms.phone}</span>
+                  <Btn
+                    size="sm"
+                    variant="primary"
+                    className="ml-auto"
+                    loading={smsBusy}
+                    disabled={smsBusy || !smsText.trim()}
+                    onClick={sendOrderSms}
+                  >
+                    <Icon name="mail" size={13} /> Send
+                  </Btn>
+                </div>
+
+                {smsMeasure.unicode && smsMeasure.length > 0 && (
+                  <p className="text-[0.75rem] leading-relaxed text-gold">
+                    Bangla or a special character is in use, so one SMS holds 70 characters instead of 160.
+                  </p>
+                )}
+
+                {sms.history?.length > 0 && (
+                  <ul className="space-y-2 border-t border-ink/8 pt-3">
+                    {[...sms.history].reverse().slice(0, 4).map((h, i) => (
+                      <li key={i} className="text-[0.75rem]">
+                        <span className="flex flex-wrap items-center gap-2">
+                          <Badge tone={h.status === 'failed' ? 'danger' : h.status === 'simulated' ? 'warning' : 'success'}>
+                            {h.status}
+                          </Badge>
+                          <span className="text-ink/45">{formatDate(h.at)} · {h.by}</span>
+                        </span>
+                        <span className="mt-0.5 block text-ink/60">{h.text}</span>
+                        {h.error && <span className="block text-red-600">{h.error}</span>}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
           </Card>
 
           {/* timeline */}

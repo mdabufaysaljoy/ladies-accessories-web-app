@@ -5,7 +5,7 @@ import { Icon } from '@/components/ui/Icon'
 import { PageHeader, usePageMeta } from '@/components/common/PageShell'
 import { useAccount } from '@/context/AccountContext'
 import { useSettings } from '@/context/SettingsContext'
-import { cx, isValidBdPhone, isValidEmail } from '@/utils/format'
+import { cx, isValidBdPhone, isValidEmail, sanitisePhoneInput } from '@/utils/format'
 
 const inputClass = (error) =>
   cx(
@@ -29,8 +29,14 @@ export default function AccountAuth({ mode = 'login' }) {
   const t = (en, bn) => (isBn ? bn : en)
   usePageMeta(isRegister ? t('Create account', 'অ্যাকাউন্ট খুলুন') : t('Sign in', 'সাইন ইন'))
 
+  /**
+   * Phone boxes only ever hold what a phone number can contain. Stripping as
+   * the shopper types means a field can never be submitted full of letters —
+   * `isValidBdPhone` still checks the shape on submit.
+   */
   const set = (key) => (e) => {
-    setForm((f) => ({ ...f, [key]: e.target.value }))
+    const value = /phone/i.test(key) ? sanitisePhoneInput(e.target.value) : e.target.value
+    setForm((f) => ({ ...f, [key]: value }))
     setErrors((x) => ({ ...x, [key]: undefined }))
     setServerError('')
   }
