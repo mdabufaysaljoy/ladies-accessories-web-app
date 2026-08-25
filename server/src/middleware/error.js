@@ -37,8 +37,8 @@ export const errorHandler = (err, _req, res, _next) => {
   if (err.name === 'MulterError') {
     status = 413
     const messages = {
-      LIMIT_FILE_SIZE: 'That file is too large. Please upload an image under 12 MB.',
-      LIMIT_FILE_COUNT: 'Too many files at once — please upload 5 or fewer.',
+      LIMIT_FILE_SIZE: 'That file is too large. Please upload an image under 10 MB.',
+      LIMIT_FILE_COUNT: 'Too many files at once — please upload 10 or fewer.',
       LIMIT_UNEXPECTED_FILE: 'Unexpected file field in the upload.',
     }
     message = messages[err.code] ?? `Upload rejected (${err.code})`

@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import { Icon } from '@/components/ui/Icon'
 import { ProductArt } from '@/components/product/ProductArt'
 import { searchProducts } from '@/data/products'
-import { CATEGORIES } from '@/data/categories'
+import { useCategories } from '@/hooks/useCategories'
 import { useStore } from '@/context/StoreContext'
 import { useEscape, useScrollLock } from '@/hooks/useScrollLock'
 import { cx, taka } from '@/utils/format'
@@ -13,6 +13,7 @@ import { cx, taka } from '@/utils/format'
 const POPULAR = ['Georgette hijab', 'Sunscreen', 'Matte lipstick', 'Hair oil', 'Attar', 'Gift set']
 
 export function SearchOverlay() {
+  const categories = useCategories()
   const { searchOpen, setSearchOpen } = useStore()
   const [query, setQuery] = useState('')
   const [cursor, setCursor] = useState(0)
@@ -140,7 +141,7 @@ export function SearchOverlay() {
               <div>
                 <p className="eyebrow text-ink/40">Browse categories</p>
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  {CATEGORIES.map((cat) => (
+                  {categories.map((cat) => (
                     <button
                       key={cat.slug}
                       type="button"

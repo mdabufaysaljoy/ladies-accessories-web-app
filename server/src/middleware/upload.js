@@ -16,6 +16,9 @@ const ALLOWED = new Set([
   'image/svg+xml',
 ])
 
+/** The same list as file extensions, for when the reported MIME type is junk. */
+const ALLOWED_EXTENSIONS = /\.(jpe?g|png|webp|avif|gif|heic|heif|tiff?|svg)$/i
+
 /**
  * Images are held in memory rather than written straight to disk: every one is
  * re-encoded by `services/imageOptimiser` before it is stored, so the original
@@ -27,18 +30,32 @@ const ALLOWED = new Set([
 export const upload = multer({
   storage: multer.memoryStorage(),
   /**
-   * 12 MB covers any phone photo. The file count is capped at 5 because
-   * memoryStorage holds every file of a batch in RAM at once, and this ships
-   * on a 1 GB VPS — 5 x 12 MB is the worst case Nginx is configured to pass
-   * through (`client_max_body_size` in deploy/nginx-api.conf). Raise one and
-   * you must raise the other, or uploads fail as a misleading CORS error.
+   * Ten files at 10 MB each. memoryStorage holds a whole batch in RAM at once,
+   * so the worst case here is ~100 MB on a 1 GB VPS — which is why the ceiling
+   * came down from 12 MB per file as the count went up, rather than both
+   * rising together. 10 MB still covers any phone photo (they arrive at 2-5 MB
+   * and leave under 200 KB after re-encoding).
+   *
+   * This must stay in step with `client_max_body_size` in
+   * deploy/nginx-api.conf. If Nginx's limit is the lower of the two it rejects
+   * the request before Express ever sees it, and the browser reports the
+   * failure as a CORS error rather than as "file too large".
    */
-  limits: { fileSize: 12 * 1024 * 1024, files: 5 },
+  limits: { fileSize: 10 * 1024 * 1024, files: 10 },
   fileFilter: (_req, file, cb) => {
-    if (!ALLOWED.has(file.mimetype)) {
-      return cb(ApiError.badRequest(`Unsupported file type: ${file.mimetype}`))
-    }
-    cb(null, true)
+    if (ALLOWED.has(file.mimetype)) return cb(null, true)
+
+    /**
+     * Fall back to the extension. Browsers and phones disagree about image
+     * MIME types — HEIC from an iPhone often arrives as application/octet-stream,
+     * and some Android galleries send an empty type — so trusting the label
+     * alone rejects perfectly good photos. Every non-SVG upload is re-encoded
+     * by sharp downstream, which fails loudly if the bytes are not an image,
+     * so the extension is a safe enough gate here.
+     */
+    if (ALLOWED_EXTENSIONS.test(file.originalname ?? '')) return cb(null, true)
+
+    cb(ApiError.badRequest(`Unsupported file type: ${file.mimetype || 'unknown'}`))
   },
 })
 

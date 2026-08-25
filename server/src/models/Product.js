@@ -91,6 +91,17 @@ productSchema.pre('validate', async function (next) {
     }
     this.slug = candidate
   }
+
+  /**
+   * SKUs are generated rather than typed. The shop owner does not maintain a
+   * code scheme, but orders, exports and the stock table all read better with
+   * a stable short code than with a blank column — so derive one from the
+   * finished slug, which is already unique.
+   */
+  if (!this.sku && this.slug) {
+    this.sku = this.slug.toUpperCase().replace(/[^A-Z0-9]+/g, '-').slice(0, 24).replace(/-+$/, '')
+  }
+
   next()
 })
 

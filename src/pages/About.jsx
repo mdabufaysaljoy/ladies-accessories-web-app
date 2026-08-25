@@ -4,7 +4,7 @@ import { Section, SectionHeader } from '@/components/ui/Section'
 import { ProductArt } from '@/components/product/ProductArt'
 import { PageHeader, usePageMeta } from '@/components/common/PageShell'
 import { getProduct } from '@/data/products'
-import { CATEGORIES } from '@/data/categories'
+import { useCategories } from '@/hooks/useCategories'
 import { useReveal } from '@/hooks/useReveal'
 
 const MILESTONES = [
@@ -59,6 +59,7 @@ const VALUES = [
 ]
 
 export default function About() {
+  const categories = useCategories()
   const ref = useReveal({ stagger: 90 })
   usePageMeta(
     'About us',
@@ -173,7 +174,7 @@ export default function About() {
             Five edits, each one held to the same test.
           </h2>
           <div className="mt-9 flex flex-wrap justify-center gap-2.5">
-            {CATEGORIES.map((c) => (
+            {categories.map((c) => (
               <Button key={c.slug} to={`/shop/${c.slug}`} variant="light" size="md">
                 {c.name}
               </Button>

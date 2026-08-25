@@ -2,7 +2,8 @@ import { Link } from 'react-router-dom'
 import { Section, SectionHeader } from '@/components/ui/Section'
 import { Icon } from '@/components/ui/Icon'
 import { ProductArt } from '@/components/product/ProductArt'
-import { CATEGORIES } from '@/data/categories'
+import { useCategories } from '@/hooks/useCategories'
+import { useSettings } from '@/context/SettingsContext'
 import { byCategory } from '@/data/products'
 import { useReveal } from '@/hooks/useReveal'
 import { cx } from '@/utils/format'
@@ -18,20 +19,37 @@ const TILE_SPANS = [
 
 export function CategoryShowcase() {
   const ref = useReveal({ stagger: 90 })
+  const categories = useCategories()
+  const { storefront } = useSettings()
+
+  /**
+   * On by default: a brand-new shop that has not been through the settings
+   * page yet should still get the section, so `=== false` rather than a
+   * truthiness check on a field that may simply be absent.
+   */
+  if (storefront?.showCategorySection === false) return null
+  if (!categories.length) return null
+
+  // The tile spans are an editorial layout for five; beyond that the extra
+  // tiles fall into the ordinary grid flow rather than breaking the pattern.
+  const tiles = categories.slice(0, 5)
 
   return (
     <Section>
       <div className="container-x">
         <SectionHeader
           eyebrow="Shop by category"
-          title="Five edits, one standard"
-          body="Everything here has been used by us first. If it did not earn a place in our own routine, it does not get listed."
+          title={storefront?.categorySectionTitle || 'Five edits, one standard'}
+          body={
+            storefront?.categorySectionBody ||
+            'Everything here has been used by us first. If it did not earn a place in our own routine, it does not get listed.'
+          }
           action="View all products"
           actionTo="/shop"
         />
 
         <div ref={ref} className="mt-12 grid auto-rows-[13rem] gap-4 md:grid-cols-4 md:auto-rows-[12rem]">
-          {CATEGORIES.map((cat, i) => {
+          {tiles.map((cat, i) => {
             const count = byCategory(cat.slug).length
             const hero = byCategory(cat.slug)[0]
             const large = i === 0
@@ -54,7 +72,7 @@ export function CategoryShowcase() {
                 <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-5">
                   <div className="min-w-0">
                     <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.16em] text-cream/60">
-                      {count} products
+                      {count} {count === 1 ? 'product' : 'products'}
                     </p>
                     <h3
                       className={cx(

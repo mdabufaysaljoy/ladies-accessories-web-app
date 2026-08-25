@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { adminApi, api } from '@/lib/api'
+import { invalidateCategories } from '@/hooks/useCategories'
 import {
-  AdminPage, Badge, Btn, Card, ConfirmDialog, Field, Input, Modal,
+  AdminPage, Badge, Btn, Card, Field, Input, Modal,
   Spinner, Table, Td, Textarea, Toggle, useToasts,
 } from '../components/ui'
 import { Icon } from '@/components/ui/Icon'
@@ -11,6 +12,7 @@ import { slugifyClient } from '@/utils/format'
 const BLANK = {
   name: '', nameBn: '', slug: '', tagline: '', taglineBn: '', blurb: '',
   subcategories: [], art: { shape: 'jar', hue: 320 }, order: 0, active: true, featured: true,
+  showInNav: true,
 }
 
 export default function Categories() {
@@ -19,7 +21,27 @@ export default function Categories() {
   const [confirm, setConfirm] = useState(null)
   const { push, node } = useToasts()
 
+  /**
+   * `hide` keeps the record and drops it off the site; `delete` removes it for
+   * good, forcing past the product-count guard because the dialog has already
+   * spelled out that consequence.
+   */
+  const removeCategory = async (mode) => {
+    try {
+      const query = mode === 'hide' ? '?mode=hide' : '?force=true'
+      await adminApi.delete(`/categories/${confirm._id}${query}`)
+      push(mode === 'hide' ? 'Category hidden' : 'Category deleted')
+      setConfirm(null)
+      load()
+    } catch (err) {
+      push(err.message, 'error')
+    }
+  }
+
   const load = useCallback(async () => {
+    // The storefront memoises categories process-wide; clear it here so the
+    // header and menus pick up this change without a page reload.
+    invalidateCategories()
     try {
       const d = await api.get('/categories?all=true')
       setCategories(d.categories)
@@ -66,6 +88,9 @@ export default function Categories() {
                 <Td align="center" className="font-medium">{c.productCount}</Td>
                 <Td>
                   <Badge tone={c.active ? 'success' : 'neutral'}>{c.active ? 'Active' : 'Hidden'}</Badge>
+                  {c.active && c.showInNav !== false && (
+                    <Badge tone="info" className="ml-1.5">In nav</Badge>
+                  )}
                 </Td>
                 <Td align="right">
                   <div className="flex justify-end gap-1.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
@@ -88,39 +113,83 @@ export default function Categories() {
         onError={(m) => push(m, 'error')}
       />
 
-      <ConfirmDialog
+      {/* Hiding and deleting are offered as separate buttons rather than one
+          "Remove" that quietly picks for you — the old dialog turned a delete
+          into a hide whenever the category had products, which is why a
+          category could never actually be removed. */}
+      <Modal
         open={Boolean(confirm)}
         onClose={() => setConfirm(null)}
         title={`Remove “${confirm?.name}”?`}
-        body={
-          confirm?.productCount > 0
-            ? `${confirm.productCount} products still use this category, so it will be hidden rather than deleted. Move those products first if you want it gone completely.`
-            : 'This category has no products and will be deleted permanently.'
+        footer={
+          <>
+            <Btn onClick={() => setConfirm(null)}>Cancel</Btn>
+            <Btn onClick={() => removeCategory('hide')}>Hide from the site</Btn>
+            <Btn variant="danger" onClick={() => removeCategory('delete')}>
+              Delete permanently
+            </Btn>
+          </>
         }
-        confirmLabel={confirm?.productCount > 0 ? 'Hide category' : 'Delete'}
-        onConfirm={async () => {
-          await adminApi.delete(`/categories/${confirm._id}?force=true`)
-          push('Category removed')
-          load()
-        }}
-      />
+      >
+        <div className="space-y-2.5 text-[0.875rem]">
+          {confirm?.productCount > 0 ? (
+            <>
+              <p className="rounded-lg bg-red-50 px-3.5 py-3 text-red-700">
+                {confirm.productCount} product{confirm.productCount === 1 ? '' : 's'} still use this
+                category. Deleting it leaves {confirm.productCount === 1 ? 'it' : 'them'}{' '}
+                uncategorised — still on sale and still reachable by search, but not listed under
+                any category until you reassign {confirm.productCount === 1 ? 'it' : 'them'}.
+              </p>
+              <p className="text-ink/60">
+                <strong>Hide from the site</strong> keeps the category and its products together and
+                simply takes it off the navigation and category pages.
+              </p>
+            </>
+          ) : (
+            <p className="text-ink/70">
+              This category has no products. Deleting it removes it for good; hiding it keeps the
+              record so you can bring it back later.
+            </p>
+          )}
+        </div>
+      </Modal>
     </AdminPage>
   )
 }
 
+/**
+ * Splits on commas and newlines so a list can be pasted from anywhere, while
+ * leaving the spaces *inside* an entry alone — "Georgette Hijab" is one type,
+ * not two.
+ */
+const parseList = (text) =>
+  String(text ?? '')
+    .split(/[,\n]/)
+    .map((x) => x.trim())
+    .filter(Boolean)
+
 function CategoryEditor({ category, onClose, onSaved, onError }) {
   const [form, setForm] = useState(BLANK)
   const [busy, setBusy] = useState(false)
+  const [subcategoryText, setSubcategoryText] = useState('')
 
   useEffect(() => {
-    if (category) setForm({ ...BLANK, ...category, art: { ...BLANK.art, ...category.art } })
+    if (!category) return
+    setForm({ ...BLANK, ...category, art: { ...BLANK.art, ...category.art } })
+    setSubcategoryText((category.subcategories ?? []).join(', '))
   }, [category])
 
   const save = async () => {
     if (!form.name.trim()) return onError('A category name is required')
     setBusy(true)
     try {
-      const payload = { ...form, slug: form.slug || slugifyClient(form.name) }
+      const payload = {
+        ...form,
+        slug: form.slug || slugifyClient(form.name),
+        // Blur normally commits the list, but saving straight from the
+        // keyboard can skip it — re-parse so nothing typed is lost.
+        subcategories: parseList(subcategoryText),
+      }
       if (form._id) await adminApi.patch(`/categories/${form._id}`, payload)
       else await adminApi.post('/categories', payload)
       onSaved()
@@ -171,13 +240,32 @@ function CategoryEditor({ category, onClose, onSaved, onError }) {
           <Textarea rows={3} value={form.blurb} onChange={(e) => setForm((f) => ({ ...f, blurb: e.target.value }))} />
         </Field>
 
-        <Field label="Types / subcategories" hint="One per line — these become the filter options">
+        {/**
+          * The raw text lives in its own state and is only parsed into an array
+          * on blur.
+          *
+          * Parsing on every keystroke made this field unusable: the value shown
+          * was `array.join(', ')`, so `trim()` deleted a space the moment you
+          * typed it — you could never put a space between two words — and
+          * `filter(Boolean)` deleted the empty entry a separator creates, so
+          * you could never start a second item either.
+          */}
+        <Field
+          label="Types / subcategories"
+          hint="Separate with commas — these become the filter options on the category page"
+        >
           <Textarea
-            rows={5}
-            value={(form.subcategories ?? []).join('\n')}
-            onChange={(e) => setForm((f) => ({ ...f, subcategories: e.target.value.split('\n').map((x) => x.trim()).filter(Boolean) }))}
-            placeholder={'Georgette Hijab\nJersey Hijab\nChiffon Hijab'}
+            rows={4}
+            value={subcategoryText}
+            onChange={(e) => setSubcategoryText(e.target.value)}
+            onBlur={() => setForm((f) => ({ ...f, subcategories: parseList(subcategoryText) }))}
+            placeholder="Georgette Hijab, Jersey Hijab, Chiffon Hijab"
           />
+          <p className="mt-1.5 text-[0.8125rem] text-ink/55">
+            {parseList(subcategoryText).length} type
+            {parseList(subcategoryText).length === 1 ? '' : 's'}
+            {parseList(subcategoryText).length > 0 && `: ${parseList(subcategoryText).join(' · ')}`}
+          </p>
         </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -208,6 +296,14 @@ function CategoryEditor({ category, onClose, onSaved, onError }) {
           <div className="flex items-end gap-5 pb-2">
             <Toggle checked={form.active} onChange={(v) => setForm((f) => ({ ...f, active: v }))} label="Visible" />
             <Toggle checked={form.featured} onChange={(v) => setForm((f) => ({ ...f, featured: v }))} label="On homepage" />
+            {/* Separate from "Visible": a category can stay browsable and
+                indexed while being left out of a header that only has room
+                for a handful of links. */}
+            <Toggle
+              checked={form.showInNav}
+              onChange={(v) => setForm((f) => ({ ...f, showInNav: v }))}
+              label="In top navigation"
+            />
           </div>
         </div>
       </div>

@@ -181,7 +181,7 @@ export default function ProductEdit() {
   return (
     <AdminPage
       title={isNew ? 'New product' : form.name || 'Edit product'}
-      subtitle={isNew ? 'Add a product to your catalogue' : `SKU ${form.sku || '—'} · /${form.slug}`}
+      subtitle={isNew ? 'Add a product to your catalogue' : `goodsbysadia.com/product/${form.slug}`}
       actions={
         <>
           <Btn as={Link} to="/admin/products" size="md">
@@ -219,6 +219,9 @@ export default function ProductEdit() {
                     value={form.name}
                     onChange={(e) => {
                       set('name', e.target.value)
+                      // The server has the final say (it resolves collisions
+                      // with -2, -3); this only keeps the SEO preview truthful
+                      // while the product is still being written.
                       if (isNew) set('slug', slugifyClient(e.target.value))
                     }}
                     placeholder="Signature Georgette Hijab"
@@ -227,10 +230,6 @@ export default function ProductEdit() {
 
                 <Field label="Bangla name" hint="Optional — shown when the site is in Bangla">
                   <Input value={form.nameBn} onChange={(e) => set('nameBn', e.target.value)} placeholder="সিগনেচার জর্জেট হিজাব" />
-                </Field>
-
-                <Field label="URL slug" hint="goodsbysadia.com/product/…">
-                  <Input value={form.slug} onChange={(e) => set('slug', slugifyClient(e.target.value))} placeholder="signature-georgette-hijab" />
                 </Field>
 
                 <Field label="Category" required error={errors.category}>
@@ -257,10 +256,6 @@ export default function ProductEdit() {
 
                 <Field label="Cost price (৳)" hint={margin != null ? `${margin}% margin` : 'For your margin report — never public'}>
                   <Input type="number" min="0" value={form.costPrice} onChange={(e) => set('costPrice', e.target.value)} />
-                </Field>
-
-                <Field label="SKU">
-                  <Input value={form.sku} onChange={(e) => set('sku', e.target.value.toUpperCase())} placeholder="HJ-GEO-001" />
                 </Field>
 
                 <Field label="Short description" hint="One line, shown on cards" className="sm:col-span-2">

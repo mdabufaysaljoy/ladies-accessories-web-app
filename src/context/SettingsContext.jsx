@@ -48,6 +48,8 @@ const FALLBACK = {
     showQuickOrder: true,
     showWhatsAppFab: true,
     heroHeadline: 'Modest style, honest beauty.',
+    // On unless the shop turns it off, matching the server-side default.
+    showCategorySection: true,
     stats: [],
   },
   faqs: [],

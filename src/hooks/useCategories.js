@@ -37,3 +37,30 @@ export function useCategories() {
 
   return categories
 }
+
+/**
+ * Drops the memoised list so the next render refetches.
+ *
+ * The admin panel and the storefront are one app, so without this a category
+ * added or deleted in the admin would not reach the header until a full page
+ * reload — the cache that stops five components refetching also stops them
+ * ever seeing the change.
+ */
+export function invalidateCategories() {
+  cache = null
+  inflight = null
+}
+
+/**
+ * Just the categories the admin has put in the top navigation.
+ *
+ * Split out rather than folded into `useCategories`, whose return value is the
+ * plain array three other screens already destructure as one.
+ *
+ * `!== false` rather than a truthiness check: categories created before the
+ * flag existed have no `showInNav` at all, and those should keep appearing
+ * rather than silently emptying the header on upgrade.
+ */
+export function useNavCategories() {
+  return useCategories().filter((c) => c.showInNav !== false)
+}

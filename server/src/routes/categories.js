@@ -93,20 +93,43 @@ router.delete(
     if (!category) throw ApiError.notFound('Category not found')
 
     const productCount = await Product.countDocuments({ category: category.slug })
+
+    /**
+     * Three outcomes, so the admin can always get to the one they meant:
+     *
+     *   (no flag)      delete, but refuse if products would be orphaned
+     *   ?mode=hide     keep the record, just take it off the site
+     *   ?force=true    delete regardless of the product count
+     *
+     * The old version silently turned a delete into a deactivate whenever the
+     * category had products, which is why a category could never actually be
+     * removed — it reported success and stayed in the list.
+     */
+    if (req.query.mode === 'hide') {
+      category.active = false
+      await category.save()
+      await logActivity({
+        actor: req.user._id, actorName: req.user.name,
+        action: 'category.hide', entity: 'Category', entityId: String(category._id),
+        summary: `Hid category “${category.name}”`,
+      })
+      return res.json({ ok: true, hidden: true, productCount })
+    }
+
     if (productCount > 0 && req.query.force !== 'true') {
       throw ApiError.conflict(
-        `${productCount} products still use this category. Move them first, or pass force=true to deactivate instead.`,
+        `${productCount} products still use this category. Move them to another category first, or confirm deleting it anyway.`,
       )
     }
 
-    if (productCount > 0) {
-      category.active = false
-      await category.save()
-    } else {
-      await category.deleteOne()
-    }
+    await category.deleteOne()
+    await logActivity({
+      actor: req.user._id, actorName: req.user.name,
+      action: 'category.delete', entity: 'Category', entityId: String(category._id),
+      summary: `Deleted category “${category.name}”${productCount ? ` (${productCount} products left uncategorised)` : ''}`,
+    })
 
-    res.json({ ok: true, deactivated: productCount > 0 })
+    res.json({ ok: true, deleted: true, orphaned: productCount })
   }),
 )
 

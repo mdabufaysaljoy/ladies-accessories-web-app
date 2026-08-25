@@ -86,7 +86,7 @@ export default function Media() {
           <Icon name="plus" size={24} className="mx-auto text-ink/30" />
           <p className="mt-2.5 text-[0.9375rem] font-medium">Drop images here, or click Upload</p>
           <p className="mt-1 text-[0.75rem] text-ink/45">
-            JPG, PNG, WebP, AVIF or SVG · up to 5 MB each · 10 files at a time
+            JPG, PNG, WebP, AVIF or SVG · up to 10 MB each · 10 files at a time
           </p>
         </div>
       </Card>

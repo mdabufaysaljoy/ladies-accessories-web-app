@@ -6,22 +6,16 @@ import { AnnouncementBar } from './AnnouncementBar'
 import { MobileMenu } from './MobileMenu'
 import { Icon } from '@/components/ui/Icon'
 import { ProductArt } from '@/components/product/ProductArt'
-import { CATEGORIES } from '@/data/categories'
+import { useNavItems } from '@/hooks/useNavigation'
 import { bestsellers } from '@/data/products'
 import { useWhatsAppLink } from '@/context/SettingsContext'
 import { useAccount } from '@/context/AccountContext'
 import { useStore } from '@/context/StoreContext'
 import { cx, taka } from '@/utils/format'
 
-const NAV = [
-  { label: 'Hijabs', to: '/shop/hijabs' },
-  { label: 'Skin Care', to: '/shop/skincare' },
-  { label: 'Cosmetics', to: '/shop/cosmetics' },
-  { label: 'Hair Care', to: '/shop/hair-care' },
-  { label: 'Others', to: '/shop/others' },
-]
-
 function MegaMenu({ onNavigate }) {
+  const navItems = useNavItems()
+
   const featured = bestsellers().slice(0, 2)
 
   return (
@@ -34,11 +28,11 @@ function MegaMenu({ onNavigate }) {
       <div className="mx-auto mt-0 max-w-7xl px-6 pt-3">
         <div className="overflow-hidden rounded-[1.5rem] border border-ink/8 bg-cream shadow-pop">
           <div className="grid grid-cols-[1fr_auto] gap-8 p-8">
-            <div className="grid grid-cols-5 gap-7">
-              {CATEGORIES.map((cat) => (
-                <div key={cat.slug}>
+            <div className="grid gap-7" style={{ gridTemplateColumns: `repeat(${Math.min(navItems.length || 1, 5)}, minmax(0, 1fr))` }}>
+              {navItems.map((cat) => (
+                <div key={cat.key}>
                   <Link
-                    to={`/shop/${cat.slug}`}
+                    to={cat.to}
                     onClick={onNavigate}
                     className="link-underline font-display text-[1.0625rem] tracking-tight hover:text-plum"
                   >
@@ -46,13 +40,13 @@ function MegaMenu({ onNavigate }) {
                   </Link>
                   <ul className="mt-3 space-y-2">
                     {cat.subcategories.map((sub) => (
-                      <li key={sub}>
+                      <li key={sub.label}>
                         <Link
-                          to={`/shop/${cat.slug}?sub=${encodeURIComponent(sub)}`}
+                          to={sub.to}
                           onClick={onNavigate}
                           className="text-[0.8125rem] text-ink/55 transition-colors hover:text-plum"
                         >
-                          {sub}
+                          {sub.label}
                         </Link>
                       </li>
                     ))}
@@ -100,6 +94,7 @@ function MegaMenu({ onNavigate }) {
 }
 
 export function Header() {
+  const navItems = useNavItems()
   const waLink = useWhatsAppLink()
   const { isSignedIn } = useAccount()
   const { totals, wishlist, setCartOpen, setSearchOpen } = useStore()
@@ -172,9 +167,9 @@ export function Header() {
                   <MegaMenu />
                 </div>
 
-                {NAV.map((item) => (
+                {navItems.map((item) => (
                   <NavLink
-                    key={item.to}
+                    key={item.key}
                     to={item.to}
                     className={({ isActive }) =>
                       cx(
@@ -182,7 +177,7 @@ export function Header() {
                         isActive && 'text-plum',
                       )
                     }
-                    data-active={location.pathname === item.to}
+                    data-active={location.pathname === `/shop/${item.key}`}
                   >
                     {item.label}
                   </NavLink>
@@ -276,4 +271,3 @@ export function Header() {
   )
 }
 
-export { NAV }

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { Drawer } from '@/components/ui/Overlay'
 import { Icon } from '@/components/ui/Icon'
 import { Button } from '@/components/ui/Button'
-import { CATEGORIES } from '@/data/categories'
+import { useNavItems } from '@/hooks/useNavigation'
 import { useSettings, useWhatsAppLink } from '@/context/SettingsContext'
 import { cx } from '@/utils/format'
 
@@ -18,6 +18,7 @@ const SECONDARY = [
 ]
 
 export function MobileMenu({ open, onClose }) {
+  const navItems = useNavItems()
   const waLink = useWhatsAppLink()
   const { contact } = useSettings()
   const [expanded, setExpanded] = useState(null)
@@ -26,13 +27,13 @@ export function MobileMenu({ open, onClose }) {
     <Drawer open={open} onClose={onClose} title="Menu" side="left" width="max-w-[21rem]">
       <nav className="px-5 py-4">
         <ul className="divide-y divide-ink/8">
-          {CATEGORIES.map((cat) => {
-            const isOpen = expanded === cat.slug
+          {navItems.map((cat) => {
+            const isOpen = expanded === cat.key
             return (
-              <li key={cat.slug} className="py-1">
+              <li key={cat.key} className="py-1">
                 <div className="flex items-center">
                   <Link
-                    to={`/shop/${cat.slug}`}
+                    to={cat.to}
                     onClick={onClose}
                     className="flex-1 py-3 font-display text-lg tracking-tight"
                   >
@@ -40,7 +41,7 @@ export function MobileMenu({ open, onClose }) {
                   </Link>
                   <button
                     type="button"
-                    onClick={() => setExpanded(isOpen ? null : cat.slug)}
+                    onClick={() => setExpanded(isOpen ? null : cat.key)}
                     aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${cat.name}`}
                     aria-expanded={isOpen}
                     className="grid h-9 w-9 place-items-center rounded-full transition-colors hover:bg-ink/[0.06]"
@@ -60,19 +61,19 @@ export function MobileMenu({ open, onClose }) {
                 >
                   <ul className="overflow-hidden">
                     {cat.subcategories.map((sub) => (
-                      <li key={sub}>
+                      <li key={sub.label}>
                         <Link
-                          to={`/shop/${cat.slug}?sub=${encodeURIComponent(sub)}`}
+                          to={sub.to}
                           onClick={onClose}
                           className="block py-2 pl-3 text-[0.875rem] text-ink/60"
                         >
-                          {sub}
+                          {sub.label}
                         </Link>
                       </li>
                     ))}
                     <li className="pb-3">
                       <Link
-                        to={`/shop/${cat.slug}`}
+                        to={cat.to}
                         onClick={onClose}
                         className="inline-flex items-center gap-1.5 py-2 pl-3 text-[0.8125rem] font-medium text-plum"
                       >

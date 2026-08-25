@@ -372,6 +372,18 @@ const settingsSchema = new mongoose.Schema(
        */
       heroProducts: [{ type: String }],
       heroBadge: { type: String, default: 'New season hijabs just landed' },
+      /**
+       * The "Shop by category" band on the home page. On by default — it is
+       * how most visitors start browsing — but a shop with only one or two
+       * categories is better off without it.
+       */
+      showCategorySection: { type: Boolean, default: true },
+      categorySectionTitle: { type: String, default: 'Five edits, one standard' },
+      categorySectionBody: {
+        type: String,
+        default:
+          'Everything here has been used by us first. If it did not earn a place in our own routine, it does not get listed.',
+      },
     },
 
 

@@ -245,7 +245,7 @@ export function ImageManager({ value = [], onChange, alt = '' }) {
           {value.length ? 'Add more images' : 'Drop a product photo here'}
         </p>
         <p className="mt-1 text-[0.75rem] text-ink/45">
-          JPG, PNG, WebP or AVIF · up to 5 MB each
+          JPG, PNG, WebP or AVIF · up to 10 MB each · 10 files at a time
         </p>
         <div className="mt-3 flex justify-center gap-2">
           <Btn size="sm" variant="primary" loading={uploading} onClick={() => inputRef.current?.click()}>

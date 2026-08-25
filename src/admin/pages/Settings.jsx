@@ -494,6 +494,32 @@ export default function SettingsPage() {
                   onChange={(v) => set('storefront', { showWhatsAppFab: v })}
                   label="Floating WhatsApp button"
                 />
+                {/* `!== false` so a shop whose settings predate this field
+                    still sees the section as on, matching the server default. */}
+                <Toggle
+                  checked={data.storefront.showCategorySection !== false}
+                  onChange={(v) => set('storefront', { showCategorySection: v })}
+                  label="“Shop by category” section"
+                  description="The category tiles on the home page. Categories appear here in the order set on the Categories page."
+                />
+                {data.storefront.showCategorySection !== false && (
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Field label="Section heading">
+                      <Input
+                        value={data.storefront.categorySectionTitle ?? ''}
+                        onChange={(e) => set('storefront', { categorySectionTitle: e.target.value })}
+                        placeholder="Five edits, one standard"
+                      />
+                    </Field>
+                    <Field label="Section blurb">
+                      <Input
+                        value={data.storefront.categorySectionBody ?? ''}
+                        onChange={(e) => set('storefront', { categorySectionBody: e.target.value })}
+                        placeholder="Everything here has been used by us first."
+                      />
+                    </Field>
+                  </div>
+                )}
                 <Field label="Currency symbol">
                   <Input value={data.storefront.currencySymbol} onChange={(e) => set('storefront', { currencySymbol: e.target.value })} className="w-24" />
                 </Field>

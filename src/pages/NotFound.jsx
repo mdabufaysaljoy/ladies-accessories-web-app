@@ -2,9 +2,10 @@ import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Icon } from '@/components/ui/Icon'
 import { usePageMeta } from '@/components/common/PageShell'
-import { CATEGORIES } from '@/data/categories'
+import { useCategories } from '@/hooks/useCategories'
 
 export default function NotFound() {
+  const categories = useCategories()
   usePageMeta('Page not found')
 
   return (
@@ -29,7 +30,7 @@ export default function NotFound() {
       <div className="mt-14 w-full max-w-2xl border-t border-ink/10 pt-9">
         <p className="eyebrow text-ink/40">Or jump to a category</p>
         <div className="mt-4 flex flex-wrap justify-center gap-2">
-          {CATEGORIES.map((c) => (
+          {categories.map((c) => (
             <Link
               key={c.slug}
               to={`/shop/${c.slug}`}

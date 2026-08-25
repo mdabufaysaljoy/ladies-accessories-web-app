@@ -138,7 +138,8 @@ function FilterPanel({ state, set, categorySlug, resultCount, facets, categories
       </FilterGroup>
 
       <p className="pt-5 text-[0.8125rem] text-ink/50">
-        Showing <strong className="font-semibold text-ink">{resultCount}</strong> products
+        Showing <strong className="font-semibold text-ink">{resultCount}</strong>{' '}
+        {resultCount === 1 ? 'product' : 'products'}
       </p>
     </div>
   )
