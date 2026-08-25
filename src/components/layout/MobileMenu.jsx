@@ -37,12 +37,12 @@ export function MobileMenu({ open, onClose }) {
                     onClick={onClose}
                     className="flex-1 py-3 font-display text-lg tracking-tight"
                   >
-                    {cat.name}
+                    {cat.label}
                   </Link>
                   <button
                     type="button"
                     onClick={() => setExpanded(isOpen ? null : cat.key)}
-                    aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${cat.name}`}
+                    aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${cat.label}`}
                     aria-expanded={isOpen}
                     className="grid h-9 w-9 place-items-center rounded-full transition-colors hover:bg-ink/[0.06]"
                   >
@@ -77,7 +77,7 @@ export function MobileMenu({ open, onClose }) {
                         onClick={onClose}
                         className="inline-flex items-center gap-1.5 py-2 pl-3 text-[0.8125rem] font-medium text-plum"
                       >
-                        Shop all {cat.name} <Icon name="arrowRight" size={14} />
+                        Shop all {cat.label} <Icon name="arrowRight" size={14} />
                       </Link>
                     </li>
                   </ul>

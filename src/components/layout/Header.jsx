@@ -36,7 +36,7 @@ function MegaMenu({ onNavigate }) {
                     onClick={onNavigate}
                     className="link-underline font-display text-[1.0625rem] tracking-tight hover:text-plum"
                   >
-                    {cat.name}
+                    {cat.label}
                   </Link>
                   <ul className="mt-3 space-y-2">
                     {cat.subcategories.map((sub) => (
