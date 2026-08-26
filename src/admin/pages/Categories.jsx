@@ -289,7 +289,7 @@ function CategoryEditor({ category, onClose, onSaved, onError }) {
           </Field>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4">
           <Field label="Sort order" hint="Lower shows first">
             <Input type="number" value={form.order} onChange={(e) => setForm((f) => ({ ...f, order: Number(e.target.value) }))} />
           </Field>
