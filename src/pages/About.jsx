@@ -3,7 +3,7 @@ import { Icon } from '@/components/ui/Icon'
 import { Section, SectionHeader } from '@/components/ui/Section'
 import { ProductArt } from '@/components/product/ProductArt'
 import { PageHeader, usePageMeta } from '@/components/common/PageShell'
-import { getProduct } from '@/data/products'
+import { useBestsellers } from '@/hooks/useCatalog'
 import { useCategories } from '@/hooks/useCategories'
 import { useReveal } from '@/hooks/useReveal'
 
@@ -60,6 +60,7 @@ const VALUES = [
 
 export default function About() {
   const categories = useCategories()
+  const heroProduct = useBestsellers(1).products[0]
   const ref = useReveal({ stagger: 90 })
   usePageMeta(
     'About us',
@@ -81,7 +82,7 @@ export default function About() {
           <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
             <div className="relative">
               <div className="aspect-[5/6] overflow-hidden rounded-[1.75rem] shadow-lift">
-                <ProductArt product={getProduct('signature-georgette-hijab')} />
+                <ProductArt product={heroProduct} />
               </div>
               <div className="absolute -bottom-7 -right-3 w-56 rounded-2xl bg-cream p-6 shadow-lift md:right-8">
                 <p className="font-display text-[2.5rem] leading-none">11</p>

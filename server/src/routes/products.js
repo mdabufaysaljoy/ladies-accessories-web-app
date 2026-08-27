@@ -26,7 +26,7 @@ router.get(
     const { page, limit, skip } = paginate(req.query)
     const {
       category, subcategory, q, tag, minPrice, maxPrice, sort = 'featured',
-      featured, badge, inStock, slugs,
+      featured, badge, inStock, slugs, onSale,
     } = req.query
 
     const filter = { status: 'active' }
@@ -44,6 +44,16 @@ router.get(
     if (badge) filter.badge = badge
     if (featured === 'true') filter.featured = true
     if (inStock === 'true') filter.stock = { $gt: 0 }
+    /**
+     * "On sale" is a comparison between two fields, not a flag, so it needs
+     * $expr rather than a plain match. Doing it here rather than filtering in
+     * the browser means the sale rail shows real results instead of whatever
+     * happened to be on the first page.
+     */
+    if (onSale === 'true') {
+      filter.compareAt = { $gt: 0 }
+      filter.$expr = { $gt: ['$compareAt', '$price'] }
+    }
     if (minPrice || maxPrice) {
       filter.price = {}
       if (minPrice) filter.price.$gte = Number(minPrice)

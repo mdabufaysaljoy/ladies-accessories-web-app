@@ -7,7 +7,7 @@ import { MobileMenu } from './MobileMenu'
 import { Icon } from '@/components/ui/Icon'
 import { ProductArt } from '@/components/product/ProductArt'
 import { useNavItems } from '@/hooks/useNavigation'
-import { bestsellers } from '@/data/products'
+import { useBestsellers } from '@/hooks/useCatalog'
 import { useWhatsAppLink } from '@/context/SettingsContext'
 import { useAccount } from '@/context/AccountContext'
 import { useStore } from '@/context/StoreContext'
@@ -16,7 +16,7 @@ import { cx, taka } from '@/utils/format'
 function MegaMenu({ onNavigate }) {
   const navItems = useNavItems()
 
-  const featured = bestsellers().slice(0, 2)
+  const featured = useBestsellers(2).products
 
   return (
     <div

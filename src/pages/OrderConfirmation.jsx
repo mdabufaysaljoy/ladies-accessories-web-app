@@ -7,7 +7,7 @@ import { Section, SectionHeader } from '@/components/ui/Section'
 import { ProductGrid } from '@/components/product/ProductGrid'
 import { EmptyState, usePageMeta } from '@/components/common/PageShell'
 import { useWhatsAppLink } from '@/context/SettingsContext'
-import { bestsellers } from '@/data/products'
+import { useBestsellers } from '@/hooks/useCatalog'
 import { useStore } from '@/context/StoreContext'
 import { API_BASE } from '@/lib/api'
 import { trackPurchase } from '@/lib/tracking'
@@ -49,6 +49,7 @@ function Confetti() {
 }
 
 export default function OrderConfirmation() {
+  const { products: bestsellerProducts } = useBestsellers(8)
   const { id } = useParams()
   const { orders } = useStore()
   const order = orders.find((o) => o.orderNumber === id) ?? null
@@ -344,7 +345,7 @@ export default function OrderConfirmation() {
           />
           <div className="mt-10">
             <ProductGrid
-              products={bestsellers()
+              products={bestsellerProducts
                 .filter((p) => !order.lines.some((l) => l.slug === p.slug))
                 .slice(0, 4)}
             />

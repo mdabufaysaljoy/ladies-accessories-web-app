@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/Button'
 import { Icon } from '@/components/ui/Icon'
 import { ProductArt } from '@/components/product/ProductArt'
-import { getProduct } from '@/data/products'
+import { useBestsellers } from '@/hooks/useCatalog'
 import { useReveal } from '@/hooks/useReveal'
 
 const PILLARS = [
@@ -24,7 +24,8 @@ const PILLARS = [
 
 export function StoryStrip() {
   const ref = useReveal({ stagger: 100 })
-  const hero = getProduct('cotton-voile-shawl')
+  // Was pinned to a seed-data slug that no real catalogue contains.
+  const hero = useBestsellers(1).products[0]
 
   return (
     <section ref={ref} className="py-16 md:py-24">

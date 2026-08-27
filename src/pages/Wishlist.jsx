@@ -3,11 +3,12 @@ import { Button } from '@/components/ui/Button'
 import { Icon } from '@/components/ui/Icon'
 import { Section, SectionHeader } from '@/components/ui/Section'
 import { EmptyState, PageHeader, usePageMeta } from '@/components/common/PageShell'
-import { bestsellers } from '@/data/products'
+import { useBestsellers } from '@/hooks/useCatalog'
 import { useStore } from '@/context/StoreContext'
 import { taka } from '@/utils/format'
 
 export default function Wishlist() {
+  const { products: bestsellerProducts } = useBestsellers(8)
   const { wishlistProducts, addToCart, toast } = useStore()
   usePageMeta('Wishlist')
 
@@ -41,7 +42,7 @@ export default function Wishlist() {
           <div className="container-x">
             <SectionHeader eyebrow="Popular right now" title="Start with these" align="center" />
             <div className="mt-10">
-              <ProductGrid products={bestsellers().slice(0, 4)} />
+              <ProductGrid products={bestsellerProducts.slice(0, 4)} />
             </div>
           </div>
         </Section>

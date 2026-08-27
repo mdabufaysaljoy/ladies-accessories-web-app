@@ -1,19 +1,40 @@
 import { useState } from 'react'
 import { Section, SectionHeader } from '@/components/ui/Section'
 import { ProductGrid } from '@/components/product/ProductGrid'
-import { bestsellers, newArrivals, onSale } from '@/data/products'
+import { useBestsellers, useNewArrivals, useOnSale } from '@/hooks/useCatalog'
 import { cx } from '@/utils/format'
 
 const TABS = [
-  { id: 'best', label: 'Bestsellers', get: bestsellers },
-  { id: 'new', label: 'New arrivals', get: newArrivals },
-  { id: 'sale', label: 'On offer', get: onSale },
+  { id: 'best', label: 'Bestsellers' },
+  { id: 'new', label: 'New arrivals' },
+  { id: 'sale', label: 'On offer' },
 ]
 
 export function FeaturedTabs() {
   const [active, setActive] = useState('best')
-  const tab = TABS.find((t) => t.id === active)
-  const products = tab.get().slice(0, 8)
+
+  /**
+   * All three rails are fetched rather than the active one, so switching tabs
+   * is instant and the counts on the inactive tabs are real. Three small
+   * requests on one page load is a fair trade for that.
+   */
+  const best = useBestsellers(8)
+  const fresh = useNewArrivals(8)
+  const sale = useOnSale(8)
+  const rails = { best, new: fresh, sale }
+
+  const rail = rails[active]
+  const products = rail.products
+
+  /**
+   * A shop with nothing to show should show nothing. The section used to fall
+   * back to bundled demo products, so an empty catalogue still rendered eight
+   * items that could not be bought.
+   */
+  if (!best.loading && !fresh.loading && !sale.loading &&
+      !best.total && !fresh.total && !sale.total) {
+    return null
+  }
 
   return (
     <Section className="bg-sand/50">
@@ -46,7 +67,7 @@ export function FeaturedTabs() {
             >
               {t.label}
               <span className={cx('ml-2 text-[0.75rem]', active === t.id ? 'text-cream/50' : 'text-ink/35')}>
-                {t.get().length}
+                {rails[t.id].total}
               </span>
             </button>
           ))}
@@ -54,7 +75,7 @@ export function FeaturedTabs() {
 
         {/* keyed so the reveal animation replays when the tab changes */}
         <div key={active} className="mt-10">
-          <ProductGrid products={products} />
+          <ProductGrid products={products} loading={rail.loading} />
         </div>
       </div>
     </Section>

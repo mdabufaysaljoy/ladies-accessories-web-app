@@ -8,7 +8,7 @@ import { Icon } from '@/components/ui/Icon'
 import { Section, SectionHeader } from '@/components/ui/Section'
 import { EmptyState, PageHeader, usePageMeta } from '@/components/common/PageShell'
 import { COUPONS, DELIVERY_ZONES } from '@/data/content'
-import { bestsellers } from '@/data/products'
+import { useBestsellers } from '@/hooks/useCatalog'
 import { useStore } from '@/context/StoreContext'
 import { cx, taka } from '@/utils/format'
 
@@ -101,6 +101,7 @@ function CouponBox() {
 }
 
 export default function Cart() {
+  const { products: bestsellerProducts } = useBestsellers(8)
   const { lines, totals, zone, zoneId, setZoneId, clearCart } = useStore()
   usePageMeta('Your bag')
 
@@ -118,7 +119,7 @@ export default function Cart() {
           <div className="container-x">
             <SectionHeader eyebrow="Start here" title="Our bestsellers" align="center" />
             <div className="mt-10">
-              <ProductGrid products={bestsellers().slice(0, 4)} />
+              <ProductGrid products={bestsellerProducts.slice(0, 4)} />
             </div>
           </div>
         </Section>
@@ -255,7 +256,7 @@ export default function Cart() {
           <SectionHeader eyebrow="Frequently added together" title="Complete your order" />
           <div className="mt-10">
             <ProductGrid
-              products={bestsellers()
+              products={bestsellerProducts
                 .filter((p) => !lines.some((l) => l.id === p.id))
                 .slice(0, 4)}
             />

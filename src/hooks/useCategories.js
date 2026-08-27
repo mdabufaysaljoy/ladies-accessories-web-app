@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { api } from '@/lib/api'
-import { CATEGORIES as FALLBACK } from '@/data/categories'
 
 let cache = null
 let inflight = null
@@ -10,18 +9,23 @@ let inflight = null
  * result is memoised process-wide rather than refetched per component.
  */
 export function useCategories() {
-  const [categories, setCategories] = useState(cache ?? FALLBACK)
+  const [categories, setCategories] = useState(cache ?? [])
 
   useEffect(() => {
     if (cache) return
     inflight ??= api
       .get('/categories')
       .then((d) => {
-        cache = d.categories?.length ? d.categories : FALLBACK
+        /**
+         * An empty list is a real answer, not a failure. Substituting the
+         * bundled demo categories here meant a shop that deleted them all
+         * still saw five categories it does not have.
+         */
+        cache = d.categories ?? []
         return cache
       })
       .catch(() => {
-        cache = FALLBACK
+        cache = []
         return cache
       })
       .finally(() => {

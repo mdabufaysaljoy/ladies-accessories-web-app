@@ -1,18 +1,49 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { adminApi } from '@/lib/api'
 import {
-  AdminPage, Badge, Btn, Card, Field, ORDER_TONE, Select,
+  AdminPage, Badge, Btn, Card, Field, Modal, ORDER_TONE, Select,
   Spinner, Table, Td, Textarea, Toggle, useToasts,
 } from '../components/ui'
+import { useAdminAuth } from '../AdminAuth'
 import { Icon } from '@/components/ui/Icon'
 import { formatDate, taka } from '@/utils/format'
 
 export default function CustomerDetail() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const [data, setData] = useState(null)
   const [notes, setNotes] = useState('')
   const { push, node } = useToasts()
+  const { user } = useAdminAuth()
+  const isOwner = user?.role === 'owner'
+  const [removeOpen, setRemoveOpen] = useState(false)
+  const [removing, setRemoving] = useState(false)
+
+  /**
+   * `anonymise` keeps the row so past orders still reconcile but strips the
+   * personal data — the right answer to a deletion request. `delete` removes
+   * the record outright and is meant for demo or duplicate entries.
+   */
+  const removeCustomer = async (mode) => {
+    setRemoving(true)
+    try {
+      const query = mode === 'anonymise' ? '?mode=anonymise' : '?force=true'
+      await adminApi.delete(`/customers/${id}${query}`)
+      if (mode === 'anonymise') {
+        push('Customer anonymised')
+        setRemoveOpen(false)
+        setRemoving(false)
+        load()
+      } else {
+        push('Customer deleted')
+        navigate('/admin/customers')
+      }
+    } catch (err) {
+      push(err.message, 'error')
+      setRemoving(false)
+    }
+  }
 
   const load = useCallback(async () => {
     try {
@@ -55,6 +86,11 @@ export default function CustomerDetail() {
           <Btn as="a" href={`tel:${customer.phone}`} variant="primary" size="md">
             <Icon name="phone" size={15} /> Call
           </Btn>
+          {isOwner && (
+            <Btn variant="danger" size="md" onClick={() => setRemoveOpen(true)}>
+              <Icon name="trash" size={15} /> Remove
+            </Btn>
+          )}
         </>
       }
     >
@@ -122,6 +158,38 @@ export default function CustomerDetail() {
           </Card>
         </div>
       </div>
+
+      <Modal
+        open={removeOpen}
+        onClose={() => setRemoveOpen(false)}
+        title={`Remove “${customer.name || customer.phone}”?`}
+        footer={
+          <>
+            <Btn onClick={() => setRemoveOpen(false)}>Cancel</Btn>
+            <Btn loading={removing} onClick={() => removeCustomer('anonymise')}>
+              Anonymise
+            </Btn>
+            <Btn variant="danger" loading={removing} onClick={() => removeCustomer('delete')}>
+              Delete permanently
+            </Btn>
+          </>
+        }
+      >
+        <div className="space-y-2.5 text-[0.875rem]">
+          {orders.length > 0 && (
+            <p className="rounded-lg bg-red-50 px-3.5 py-3 text-red-700">
+              This customer has {orders.length} order{orders.length === 1 ? '' : 's'}. Deleting the
+              record does not delete those orders — each one keeps its own copy of the name, phone
+              and address — it only breaks the link back to this profile.
+            </p>
+          )}
+          <p className="text-ink/60">
+            <strong>Anonymise</strong> keeps the record so past orders still reconcile, but clears
+            the name, phone, email and address. It is the right choice for a customer who has asked
+            to be forgotten. <strong>Delete permanently</strong> is for demo or duplicate entries.
+          </p>
+        </div>
+      </Modal>
     </AdminPage>
   )
 }

@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { trackSearch } from '@/lib/tracking'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { Icon } from '@/components/ui/Icon'
 import { ProductArt } from '@/components/product/ProductArt'
-import { searchProducts } from '@/data/products'
+import { useProductSearch } from '@/hooks/useCatalog'
 import { useCategories } from '@/hooks/useCategories'
 import { useStore } from '@/context/StoreContext'
 import { useEscape, useScrollLock } from '@/hooks/useScrollLock'
@@ -24,7 +24,17 @@ export function SearchOverlay() {
   useScrollLock(searchOpen)
   useEscape(searchOpen, close)
 
-  const results = useMemo(() => searchProducts(query), [query])
+  const { results, search } = useProductSearch()
+
+  /**
+   * Debounced: the search now goes to the database instead of filtering a
+   * bundled array, so firing on every keystroke would mean a request per
+   * character typed.
+   */
+  useEffect(() => {
+    const t = setTimeout(() => search(query), 180)
+    return () => clearTimeout(t)
+  }, [query, search])
 
   useEffect(() => {
     if (searchOpen) {

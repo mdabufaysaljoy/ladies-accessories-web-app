@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/Button'
 import { Icon } from '@/components/ui/Icon'
 import { ProductArt } from '@/components/product/ProductArt'
 import { ROUTINE_STEPS } from '@/data/content'
-import { getProduct } from '@/data/products'
+import { useProductsBySlug, useBestsellers } from '@/hooks/useCatalog'
 import { useStore } from '@/context/StoreContext'
 import { useReveal } from '@/hooks/useReveal'
 import { taka } from '@/utils/format'
@@ -13,7 +13,24 @@ export function RoutineSteps() {
   const ref = useReveal({ stagger: 110 })
   const { addToCart, toast } = useStore()
 
-  const products = ROUTINE_STEPS.map((s) => getProduct(s.productSlug))
+  /**
+   * The three slugs are the shop's editorial choice, but a real catalogue may
+   * not contain them — they were seed-data slugs. Fall back to bestsellers so
+   * the bundle is always three products the shop actually sells, and hide the
+   * section entirely when there are not three to offer.
+   */
+  const pinned = useProductsBySlug(ROUTINE_STEPS.map((s) => s.productSlug))
+  const { products: fallback, loading } = useBestsellers(3)
+  const products = pinned.length === ROUTINE_STEPS.length ? pinned : fallback.slice(0, 3)
+
+  /**
+   * The section is a three-product bundle, so it only makes sense with three
+   * products. A shop with fewer simply does not show it, rather than rendering
+   * empty slots or crashing on an undefined product.
+   */
+  if (loading) return null
+  if (products.length < ROUTINE_STEPS.length) return null
+
   const bundleTotal = products.reduce((sum, p) => sum + p.price, 0)
   const bundlePrice = Math.round(bundleTotal * 0.85)
 

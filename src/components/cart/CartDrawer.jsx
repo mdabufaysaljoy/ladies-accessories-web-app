@@ -5,11 +5,12 @@ import { Icon } from '@/components/ui/Icon'
 import { CartLine } from './CartLine'
 import { FreeShippingBar } from './FreeShippingBar'
 import { ProductArt } from '@/components/product/ProductArt'
-import { bestsellers } from '@/data/products'
+import { useBestsellers } from '@/hooks/useCatalog'
 import { useStore } from '@/context/StoreContext'
 import { taka } from '@/utils/format'
 
 export function CartDrawer() {
+  const { products: bestsellerProducts } = useBestsellers(8)
   const { cartOpen, setCartOpen, lines, totals, addToCart } = useStore()
   const navigate = useNavigate()
   const close = () => setCartOpen(false)
@@ -19,8 +20,8 @@ export function CartDrawer() {
     navigate(path)
   }
 
-  // Cross-sell: bestsellers that are not already in the bag.
-  const suggestions = bestsellers()
+  // Cross-sell: real bestsellers that are not already in the bag.
+  const suggestions = bestsellerProducts
     .filter((p) => !lines.some((l) => l.id === p.id))
     .slice(0, 2)
 

@@ -743,4 +743,57 @@ router.post(
   }),
 )
 
+/**
+ * Deleting an order.
+ *
+ * Orders are business records, so this is owner-only and never the first
+ * resort: cancelling keeps the history and the customer's totals intact.
+ * Deletion exists because a real shop starts with demo or mistaken orders
+ * that would otherwise skew every report for ever.
+ *
+ * Deleting also rolls back what the order contributed — the customer's order
+ * count and lifetime spend, and each product's sold count — because leaving
+ * those inflated is exactly the corruption the delete was meant to clear.
+ */
+router.delete(
+  '/:id',
+  requireAuth,
+  requireAbility('orders'),
+  asyncHandler(async (req, res) => {
+    if (req.user.role !== 'owner') {
+      throw ApiError.forbidden('Only the owner can delete orders')
+    }
+
+    const order = await Order.findById(req.params.id)
+    if (!order) throw ApiError.notFound('Order not found')
+
+    for (const line of order.lines ?? []) {
+      if (!line.product) continue
+      await Product.updateOne(
+        { _id: line.product },
+        { $inc: { soldCount: -Math.abs(Number(line.qty) || 0) } },
+      ).catch(() => {})
+    }
+
+    if (order.customer?.phone) {
+      const customer = await Customer.findOne({ phone: order.customer.phone })
+      if (customer) {
+        customer.orderCount = Math.max(0, (customer.orderCount ?? 1) - 1)
+        customer.totalSpent = Math.max(0, (customer.totalSpent ?? 0) - (order.totals?.total ?? 0))
+        await customer.save().catch(() => {})
+      }
+    }
+
+    await order.deleteOne()
+
+    await logActivity({
+      actor: req.user._id, actorName: req.user.name,
+      action: 'order.delete', entity: 'Order', entityId: req.params.id,
+      summary: `Deleted order ${order.orderNumber}`,
+    })
+
+    res.json({ ok: true, deleted: true, orderNumber: order.orderNumber })
+  }),
+)
+
 export default router

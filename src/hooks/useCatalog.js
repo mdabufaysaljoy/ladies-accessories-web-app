@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api, qs } from '@/lib/api'
-import { PRODUCTS as LOCAL_PRODUCTS } from '@/data/products'
 
 /**
  * Normalises an API product into the shape the storefront components already
@@ -25,9 +24,7 @@ export function adaptProduct(p) {
   }
 }
 
-const LOCAL = LOCAL_PRODUCTS.map(adaptProduct)
-
-/** Paginated product list with filters. Falls back to bundled data offline. */
+/** Paginated product list with filters. */
 export function useProducts(params = {}, { enabled = true } = {}) {
   const [state, setState] = useState({ products: [], meta: null, loading: enabled, error: null })
   const key = JSON.stringify(params)
@@ -45,7 +42,9 @@ export function useProducts(params = {}, { enabled = true } = {}) {
       })
       .catch((error) => {
         if (!alive) return
-        setState({ products: LOCAL, meta: null, loading: false, error })
+        // Showing bundled demo products when the API is unreachable put items
+        // on the shelf that cannot be bought; an error state is more honest.
+        setState({ products: [], meta: null, loading: false, error })
       })
 
     return () => {
@@ -78,13 +77,12 @@ export function useProduct(slug) {
       })
       .catch((error) => {
         if (!alive) return
-        const local = LOCAL.find((p) => p.slug === slug) ?? null
-        setState({
-          product: local,
-          related: local ? LOCAL.filter((p) => p.category === local.category && p.slug !== slug).slice(0, 4) : [],
-          loading: false,
-          error: local ? null : error,
-        })
+        /**
+         * A deleted product must 404, not silently resolve to the bundled
+         * demo record of the same slug — that showed a product page, with a
+         * price and an add-to-bag button, for something the shop had removed.
+         */
+        setState({ product: null, related: [], loading: false, error })
       })
 
     return () => {
@@ -111,11 +109,7 @@ export function useProductSearch() {
       const d = await api.get(`/products${qs({ q, limit: 8 })}`)
       setResults(d.products.map(adaptProduct))
     } catch {
-      setResults(
-        LOCAL.filter((p) =>
-          [p.name, p.category, p.subcategory, p.short, ...p.tags].join(' ').toLowerCase().includes(q.toLowerCase()),
-        ).slice(0, 8),
-      )
+      setResults([])
     } finally {
       setSearching(false)
     }
@@ -140,4 +134,77 @@ export function useFacets(category) {
   }, [category])
 
   return facets
+}
+
+/**
+ * The home page and cross-sell rails, from the database.
+ *
+ * These used to call `bestsellers()` / `newArrivals()` / `onSale()` on the
+ * bundled `src/data/products.js`, which meant every rail on the storefront
+ * showed demo products regardless of what the shop actually sells — the
+ * catalogue could be emptied and the home page would look unchanged.
+ *
+ * No offline fallback here on purpose: an empty catalogue must render as
+ * empty. Falling back to bundled demo products is what created the illusion
+ * of stock that does not exist.
+ */
+function useRail(params, limit) {
+  const [state, setState] = useState({ products: [], loading: true, total: 0 })
+  const key = JSON.stringify({ ...params, limit })
+
+  useEffect(() => {
+    let alive = true
+    api
+      .get(`/products${qs(JSON.parse(key))}`)
+      .then((d) => {
+        if (!alive) return
+        setState({
+          products: (d.products ?? []).map(adaptProduct),
+          loading: false,
+          total: d.meta?.total ?? d.products?.length ?? 0,
+        })
+      })
+      .catch(() => alive && setState({ products: [], loading: false, total: 0 }))
+    return () => {
+      alive = false
+    }
+  }, [key])
+
+  return state
+}
+
+export const useBestsellers = (limit = 8) => useRail({ sort: 'bestselling' }, limit)
+export const useNewArrivals = (limit = 8) => useRail({ sort: 'new' }, limit)
+export const useOnSale = (limit = 8) => useRail({ onSale: 'true' }, limit)
+
+/**
+ * Resolves a handful of products by slug in one request — for the wishlist,
+ * recently-viewed and any hand-picked editorial slot.
+ */
+export function useProductsBySlug(slugs = []) {
+  const clean = (slugs ?? []).filter(Boolean)
+  const key = clean.join(',')
+  const [products, setProducts] = useState([])
+
+  useEffect(() => {
+    if (!key) {
+      setProducts([])
+      return
+    }
+    let alive = true
+    api
+      .get(`/products?slugs=${encodeURIComponent(key)}&limit=20`)
+      .then((d) => {
+        if (!alive) return
+        // Restore the caller's order; the API sorts by its own rules.
+        const bySlug = new Map((d.products ?? []).map((p) => [p.slug, p]))
+        setProducts(key.split(',').map((s) => bySlug.get(s)).filter(Boolean).map(adaptProduct))
+      })
+      .catch(() => alive && setProducts([]))
+    return () => {
+      alive = false
+    }
+  }, [key])
+
+  return products
 }

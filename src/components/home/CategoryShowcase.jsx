@@ -4,7 +4,6 @@ import { Icon } from '@/components/ui/Icon'
 import { ProductArt } from '@/components/product/ProductArt'
 import { useCategories } from '@/hooks/useCategories'
 import { useSettings } from '@/context/SettingsContext'
-import { byCategory } from '@/data/products'
 import { useReveal } from '@/hooks/useReveal'
 import { cx } from '@/utils/format'
 
@@ -50,8 +49,10 @@ export function CategoryShowcase() {
 
         <div ref={ref} className="mt-12 grid auto-rows-[13rem] gap-4 md:grid-cols-4 md:auto-rows-[12rem]">
           {tiles.map((cat, i) => {
-            const count = byCategory(cat.slug).length
-            const hero = byCategory(cat.slug)[0]
+            // Both come from the category record now. The count used to be
+            // taken from the bundled demo catalogue, and the tile art from a
+            // bundled demo product — so the tiles never reflected the shop.
+            const count = cat.productCount ?? 0
             const large = i === 0
 
             return (
@@ -64,7 +65,19 @@ export function CategoryShowcase() {
                 )}
               >
                 <div className="absolute inset-0 transition-transform duration-[1100ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.07]">
-                  <ProductArt product={hero} />
+                  {/* The admin's own photo when they have set one; the
+                      generated artwork for this category otherwise, so a tile
+                      is never blank while the shop is still filling in. */}
+                  {cat.imageUrl ? (
+                    <img
+                      src={cat.imageUrl}
+                      alt={cat.name}
+                      loading="lazy"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <ProductArt product={{ name: cat.name, art: cat.art, category: cat.slug }} />
+                  )}
                 </div>
 
                 <div className="absolute inset-0 bg-gradient-to-t from-ink/75 via-ink/15 to-transparent" />

@@ -6,7 +6,6 @@ import { ReviewForm } from '@/components/review/ReviewForm'
 import { ReviewList, ReviewSummary } from '@/components/review/ReviewList'
 import { useReviews } from '@/hooks/useReviews'
 import { useSettings } from '@/context/SettingsContext'
-import { TESTIMONIALS } from '@/data/content'
 
 /**
  * Reviews of the business itself — delivery, packing, service — as opposed to
@@ -90,30 +89,19 @@ export default function Reviews() {
                 ) : hasReal ? (
                   <ReviewList reviews={reviews} />
                 ) : (
-                  <>
-                    <p className="mb-5 text-[0.8125rem] uppercase tracking-[0.14em] text-ink/40">
-                      What customers have told us
+                  /**
+                   * An honest empty state. This used to fall back to a bundled
+                   * list of invented testimonials under the heading "What
+                   * customers have told us" — fabricated reviews shown to real
+                   * shoppers, which is not something a shop should publish.
+                   */
+                  <div className="rounded-[1.25rem] bg-cream p-9 text-center">
+                    <p className="font-display text-[1.25rem] tracking-tight">No reviews yet</p>
+                    <p className="mx-auto mt-2 max-w-sm text-[0.9375rem] leading-relaxed text-ink/60 text-balance-pretty">
+                      Reviews appear here once customers have bought something and written one.
+                      Every review is from a verified order.
                     </p>
-                    <ul className="space-y-5">
-                      {TESTIMONIALS.map((t) => (
-                        <li key={t.name} className="rounded-[1.25rem] bg-cream p-7">
-                          <div className="flex items-center gap-3">
-                            <span className="grid h-10 w-10 place-items-center rounded-full bg-blush font-display text-plum">
-                              {t.name.charAt(0)}
-                            </span>
-                            <div>
-                              <p className="text-[0.9375rem] font-medium">{t.name}</p>
-                              <p className="text-[0.75rem] text-ink/45">{t.location}</p>
-                            </div>
-                          </div>
-                          <Rating value={t.rating} size={15} className="mt-4" />
-                          <p className="mt-3 text-[0.9375rem] leading-relaxed text-ink/70 text-balance-pretty">
-                            {t.body}
-                          </p>
-                        </li>
-                      ))}
-                    </ul>
-                  </>
+                  </div>
                 )}
               </div>
             </div>

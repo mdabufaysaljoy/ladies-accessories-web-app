@@ -45,51 +45,6 @@ export const TRUST_POINTS = [
   },
 ]
 
-export const TESTIMONIALS = [
-  {
-    name: 'Nusrat J.',
-    location: 'Dhanmondi, Dhaka',
-    rating: 5,
-    product: 'Signature Georgette Hijab',
-    body: 'I have bought georgette from six different pages. This one is genuinely different — it does not slip, and after eight washes the colour is exactly the same. I ordered four more.',
-  },
-  {
-    name: 'Farhana R.',
-    location: 'Chattogram',
-    rating: 5,
-    product: 'Invisible Sunscreen SPF 50+',
-    body: 'Finally a sunscreen with no white cast on my skin tone. I wear it under foundation every day and nothing pills. Delivery to Chattogram took three days, packed properly.',
-  },
-  {
-    name: 'Sumaiya A.',
-    location: 'Uttara, Dhaka',
-    rating: 5,
-    product: 'Rosemary Scalp Growth Oil',
-    body: 'My edges were thinning from wearing a scarf every day. Three months of using this twice a week and there is real regrowth. The nozzle makes it so much easier to apply.',
-  },
-  {
-    name: 'Tasnim H.',
-    location: 'Sylhet',
-    rating: 4,
-    product: 'Velvet Matte Lipstick',
-    body: 'Rosewood is my everyday shade now. It lasted through lunch and a whole afternoon of meetings. Cash on delivery made it easy to try without risk.',
-  },
-  {
-    name: 'Ayesha K.',
-    location: 'Mirpur, Dhaka',
-    rating: 5,
-    product: 'Self-Care Sunday Bundle',
-    body: 'Sent this to my sister for her birthday. The packaging is beautiful — she thought I spent twice as much. Sadia even wrote the gift note by hand.',
-  },
-  {
-    name: 'Rumana S.',
-    location: 'Rajshahi',
-    rating: 5,
-    product: 'Niacinamide 10% Clarity Serum',
-    body: 'My acne marks have faded noticeably in about five weeks. No irritation at all, and it layers well with everything else. Real product, real results.',
-  },
-]
-
 export const FAQS = [
   {
     q: 'How long does delivery take?',

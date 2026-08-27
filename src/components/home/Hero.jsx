@@ -71,7 +71,10 @@ export function Hero() {
             </div>
           </div>
 
-          {/* composed product stack */}
+          {/* Composed product stack — only when the shop has something to put
+              in it. A brand-new or emptied catalogue renders the copy and the
+              call to action alone rather than crashing on an absent product. */}
+          {featured && (
           <div className="relative">
             <div className="reveal relative mx-auto aspect-[4/5] w-full max-w-md overflow-hidden rounded-[2rem] shadow-pop">
               <ProductArt product={featured} priority />
@@ -99,6 +102,7 @@ export function Hero() {
             </div>
 
             {/* floating satellites */}
+            {secondary && (
             <Link
               to={`/product/${secondary.slug}`}
               className="reveal absolute -left-2 top-8 hidden w-40 animate-[float_8s_ease-in-out_infinite] overflow-hidden rounded-2xl bg-cream p-2.5 shadow-lift transition-transform duration-300 hover:scale-105 lg:block xl:-left-12"
@@ -109,6 +113,7 @@ export function Hero() {
               <p className="mt-2 truncate px-1 text-[0.75rem] font-medium">{secondary.name}</p>
               <p className="px-1 pb-1 text-[0.75rem] text-ink/50">{taka(secondary.price)}</p>
             </Link>
+            )}
 
             <div className="reveal absolute -bottom-4 -right-1 hidden w-48 animate-[float_9s_ease-in-out_1.5s_infinite] rounded-2xl bg-cream p-4 shadow-lift lg:block xl:-right-10">
               <Rating value={5} size={13} />
@@ -118,6 +123,7 @@ export function Hero() {
               <p className="mt-2 text-[0.6875rem] text-ink/45">Nusrat J. · Dhanmondi</p>
             </div>
 
+            {tertiary && (
             <Link
               to={`/product/${tertiary.slug}`}
               aria-label={tertiary.name}
@@ -126,7 +132,9 @@ export function Hero() {
             >
               <ProductArt product={tertiary} decorative={false} />
             </Link>
+            )}
           </div>
+          )}
         </div>
       </div>
     </section>

@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '@/lib/api'
 import { adaptProduct } from '@/hooks/useCatalog'
-import { PRODUCTS as LOCAL_PRODUCTS } from '@/data/products'
 
 /**
  * The three products the hero shows, in the order the admin arranged them.
@@ -37,7 +36,10 @@ export function useHeroProducts(slugs = []) {
         const { products: featured } = await api.get('/products?featured=true&limit=3')
         if (alive) setProducts((featured ?? []).map(adaptProduct))
       } catch {
-        if (alive) setProducts(LOCAL_PRODUCTS.slice(0, 3).map(adaptProduct))
+        // No demo fallback: an empty or unreachable catalogue must show as
+        // empty. Substituting bundled products put items in the hero that the
+        // shop does not sell and cannot fulfil.
+        if (alive) setProducts([])
       }
     }
 
@@ -51,12 +53,12 @@ export function useHeroProducts(slugs = []) {
   }, [key])
 
   /**
-   * Padded to three so the hero's layout is stable while loading and when the
-   * shop has fewer than three products — the slots reuse what is available
-   * rather than collapsing the composition.
+   * The slots reuse whatever is available so a shop with one or two products
+   * still gets a complete hero composition. With none at all every slot is
+   * undefined and the hero renders its product-free layout — which is correct
+   * for a catalogue that is genuinely empty.
    */
-  const list = products ?? LOCAL_PRODUCTS.slice(0, 3).map(adaptProduct)
-  const safe = list.length ? list : LOCAL_PRODUCTS.slice(0, 3).map(adaptProduct)
+  const safe = products ?? []
 
   return {
     main: safe[0],

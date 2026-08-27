@@ -84,14 +84,6 @@ export default function AdminLogin() {
               Sign in
             </Btn>
           </form>
-
-          <p className="mt-8 rounded-xl bg-sand px-4 py-3.5 text-[0.75rem] leading-relaxed text-ink/60">
-            <strong className="font-semibold text-ink">Demo credentials</strong>
-            <br />
-            admin@goodsbysadia.com · ChangeMe123!
-            <br />
-            <span className="text-ink/45">Change this password immediately in a real deployment.</span>
-          </p>
         </div>
       </div>
 

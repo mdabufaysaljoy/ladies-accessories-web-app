@@ -6,11 +6,13 @@ import {
   Spinner, Table, Td, Textarea, Toggle, useToasts,
 } from '../components/ui'
 import { Icon } from '@/components/ui/Icon'
+import { MediaPicker } from '../components/ImageManager'
 import { ART_SHAPE_OPTIONS } from '@/components/product/ProductArt'
 import { slugifyClient } from '@/utils/format'
 
 const BLANK = {
   name: '', nameBn: '', slug: '', tagline: '', taglineBn: '', blurb: '',
+  imageUrl: '',
   subcategories: [], art: { shape: 'jar', hue: 320 }, order: 0, active: true, featured: true,
   showInNav: true,
 }
@@ -172,6 +174,7 @@ function CategoryEditor({ category, onClose, onSaved, onError }) {
   const [form, setForm] = useState(BLANK)
   const [busy, setBusy] = useState(false)
   const [subcategoryText, setSubcategoryText] = useState('')
+  const [pickerOpen, setPickerOpen] = useState(false)
 
   useEffect(() => {
     if (!category) return
@@ -268,6 +271,26 @@ function CategoryEditor({ category, onClose, onSaved, onError }) {
           </p>
         </Field>
 
+        {/* The tile on the home page uses this photo; the generated artwork
+            below is only the stand-in until the shop has one. */}
+        <Field label="Category image" hint="Shown on the “Shop by category” tiles">
+          <div className="flex flex-wrap items-center gap-2">
+            {form.imageUrl && (
+              <div className="h-16 w-16 overflow-hidden rounded-lg border border-ink/12">
+                <img src={form.imageUrl} alt="" className="h-full w-full object-cover" />
+              </div>
+            )}
+            <Btn size="sm" onClick={() => setPickerOpen(true)}>
+              <Icon name="eye" size={14} /> {form.imageUrl ? 'Change image' : 'Upload or choose image'}
+            </Btn>
+            {form.imageUrl && (
+              <Btn size="sm" variant="ghost" onClick={() => setForm((f) => ({ ...f, imageUrl: '' }))}>
+                Remove
+              </Btn>
+            )}
+          </div>
+        </Field>
+
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Artwork style">
             <select
@@ -307,6 +330,13 @@ function CategoryEditor({ category, onClose, onSaved, onError }) {
           </div>
         </div>
       </div>
+
+      <MediaPicker
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        multiple={false}
+        onSelect={(urls) => setForm((f) => ({ ...f, imageUrl: urls[0] ?? '' }))}
+      />
     </Modal>
   )
 }

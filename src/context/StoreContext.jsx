@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
-import { PRODUCTS } from '@/data/products'
+import { useProductsBySlug } from '@/hooks/useCatalog'
 import { useSettings } from '@/context/SettingsContext'
 import { api } from '@/lib/api'
 import { freeShippingThreshold, qualifiesForFreeShipping } from '@/utils/format'
@@ -16,6 +16,17 @@ export function StoreProvider({ children }) {
   const [lines, setLines] = useLocalStorage('gbs.cart', [])
   const [wishlist, setWishlist] = useLocalStorage('gbs.wishlist', [])
   const [recentlyViewed, setRecentlyViewed] = useLocalStorage('gbs.recent', [])
+
+  /**
+   * Both lists are stored as slugs and resolved against the database.
+   *
+   * They used to be looked up in the bundled `PRODUCTS` array, so a saved item
+   * showed demo data — the wrong price, the wrong stock, and a product the
+   * shop may never have sold. Resolving from the API also means an item that
+   * has since been deleted quietly drops out of the list instead of lingering.
+   */
+  const wishlistProducts = useProductsBySlug(wishlist)
+  const recentProducts = useProductsBySlug(recentlyViewed)
   const [orders, setOrders] = useLocalStorage('gbs.orders', [])
   const [coupon, setCoupon] = useLocalStorage('gbs.coupon', null)
   const [zoneId, setZoneId] = useLocalStorage('gbs.zone', 'dhaka-city')
@@ -209,12 +220,8 @@ export function StoreProvider({ children }) {
       wishlist,
       toggleWishlist,
       inWishlist,
-      wishlistProducts: wishlist
-        .map((slug) => PRODUCTS.find((p) => p.slug === slug))
-        .filter(Boolean),
-      recentProducts: recentlyViewed
-        .map((slug) => PRODUCTS.find((p) => p.slug === slug))
-        .filter(Boolean),
+      wishlistProducts,
+      recentProducts,
       trackView,
       coupon,
       applyCoupon,
@@ -237,6 +244,7 @@ export function StoreProvider({ children }) {
     [
       lines, addToCart, updateQty, removeLine, clearCart,
       wishlist, toggleWishlist, inWishlist, recentlyViewed, trackView,
+      wishlistProducts, recentProducts,
       coupon, applyCoupon, removeCoupon, zone, zoneId, setZoneId, totals,
       orders, placeOrder, findOrder,
       toasts, toast, dismissToast, cartOpen, searchOpen,

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { adminApi, API_BASE } from '@/lib/api'
 import {
   AdminPage, Badge, Btn, Card, Field, Input, Modal, ORDER_TONE, PAYMENT_TONE,
@@ -8,6 +8,7 @@ import {
 import { Icon } from '@/components/ui/Icon'
 import { ProductArt } from '@/components/product/ProductArt'
 import { useSettings } from '@/context/SettingsContext'
+import { useAdminAuth } from '../AdminAuth'
 import { cx, formatDate, taka } from '@/utils/format'
 
 const FLOW = ['pending', 'confirmed', 'packed', 'shipped', 'delivered']
@@ -18,8 +19,13 @@ const METHOD_LABEL = {
 
 export default function OrderDetail() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const { delivery } = useSettings()
   const { push, node } = useToasts()
+  const { user } = useAdminAuth()
+  const isOwner = user?.role === 'owner'
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -73,6 +79,18 @@ export default function OrderDetail() {
       setSmsError(err.message || 'Could not load the SMS panel')
     }
   }, [id])
+
+  const deleteOrder = async () => {
+    setDeleting(true)
+    try {
+      await adminApi.delete(`/orders/${id}`)
+      push('Order deleted')
+      navigate('/admin/orders')
+    } catch (err) {
+      push(err.message, 'error')
+      setDeleting(false)
+    }
+  }
 
   const sendOrderSms = async () => {
     setSmsBusy(true)
@@ -229,6 +247,13 @@ export default function OrderDetail() {
           <Btn as="a" href={`tel:${order.customer.phone}`} variant="primary" size="md">
             <Icon name="phone" size={15} /> Call customer
           </Btn>
+          {/* Owner-only: an order is a business record, and deleting one
+              rewrites the customer's history and the product's sales. */}
+          {isOwner && (
+            <Btn variant="danger" size="md" onClick={() => setDeleteOpen(true)}>
+              <Icon name="trash" size={15} /> Delete
+            </Btn>
+          )}
         </>
       }
     >
@@ -708,6 +733,31 @@ export default function OrderDetail() {
           )}
         </div>
       </div>
+
+      <Modal
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        title={`Delete order ${order.orderNumber}?`}
+        footer={
+          <>
+            <Btn onClick={() => setDeleteOpen(false)}>Cancel</Btn>
+            <Btn variant="danger" loading={deleting} onClick={deleteOrder}>
+              Delete permanently
+            </Btn>
+          </>
+        }
+      >
+        <div className="space-y-2.5 text-[0.875rem]">
+          <p className="rounded-lg bg-red-50 px-3.5 py-3 text-red-700">
+            This cannot be undone. Use it for test or demo orders — to stop a real order,
+            set its status to Cancelled instead, which keeps the record.
+          </p>
+          <p className="text-ink/60">
+            The customer's order count and lifetime spend, and the sold count on each product
+            in this order, are all rolled back so your reports stay accurate.
+          </p>
+        </div>
+      </Modal>
 
       <PaymentModal
         open={payModal}

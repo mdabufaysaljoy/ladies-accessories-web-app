@@ -140,4 +140,66 @@ router.patch(
   }),
 )
 
+/**
+ * Deleting a customer record.
+ *
+ * Owner-only, and it refuses while the customer still has orders: an order
+ * carries its own copy of the buyer's name, phone and address, so deleting
+ * the customer would not remove that data — it would only break the link and
+ * leave the shop unable to see who an order belongs to. Deleting the orders
+ * first is the honest order of operations, and `?force=true` is there for a
+ * demo record whose orders have already gone.
+ *
+ * `mode=anonymise` is the option to reach for on a real deletion request: it
+ * keeps the row so past orders still reconcile, but strips the personal data.
+ */
+router.delete(
+  '/:id',
+  asyncHandler(async (req, res) => {
+    if (req.user.role !== 'owner') {
+      throw ApiError.forbidden('Only the owner can delete customers')
+    }
+
+    const customer = await Customer.findById(req.params.id)
+    if (!customer) throw ApiError.notFound('Customer not found')
+
+    const orderCount = await Order.countDocuments({ 'customer.phone': customer.phone })
+
+    if (req.query.mode === 'anonymise') {
+      const suffix = String(customer._id).slice(-6)
+      customer.name = 'Deleted customer'
+      customer.email = ''
+      customer.phone = `deleted-${suffix}`
+      customer.address = ''
+      customer.area = ''
+      customer.notes = ''
+      customer.acceptsMarketing = false
+      await customer.save()
+
+      await logActivity({
+        actor: req.user._id, actorName: req.user.name,
+        action: 'customer.anonymise', entity: 'Customer', entityId: req.params.id,
+        summary: `Anonymised a customer record (${orderCount} orders kept)`,
+      })
+      return res.json({ ok: true, anonymised: true, orderCount })
+    }
+
+    if (orderCount > 0 && req.query.force !== 'true') {
+      throw ApiError.conflict(
+        `This customer has ${orderCount} order${orderCount === 1 ? '' : 's'}. Delete those first, anonymise the record instead, or confirm deleting it anyway.`,
+      )
+    }
+
+    await customer.deleteOne()
+
+    await logActivity({
+      actor: req.user._id, actorName: req.user.name,
+      action: 'customer.delete', entity: 'Customer', entityId: req.params.id,
+      summary: `Deleted customer “${customer.name}”${orderCount ? ` (${orderCount} orders left unlinked)` : ''}`,
+    })
+
+    res.json({ ok: true, deleted: true, orphanedOrders: orderCount })
+  }),
+)
+
 export default router
