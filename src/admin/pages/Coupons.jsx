@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { adminApi } from '@/lib/api'
 import {
-  AdminPage, Badge, Btn, Card, ConfirmDialog, EmptyRow, Field, Input,
+  AdminPage, Badge, Btn, Card, ConfirmDialog, EmptyRow, Field, Input, NumberInput,
   Modal, Select, Spinner, Table, Td, Toggle, useToasts,
 } from '../components/ui'
 import { Icon } from '@/components/ui/Icon'
@@ -159,25 +159,25 @@ function CouponEditor({ coupon, onClose, onSaved, onError }) {
           </Field>
           {form.type !== 'shipping' && (
             <Field label={form.type === 'percent' ? 'Percentage (%)' : 'Amount (৳)'}>
-              <Input type="number" min="0" value={form.value} onChange={(e) => set({ value: Number(e.target.value) })} />
+              <NumberInput min="0" value={form.value} onChange={(v) => set({ value: v })} />
             </Field>
           )}
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Minimum spend (৳)" hint="0 = no minimum">
-            <Input type="number" min="0" value={form.minSpend} onChange={(e) => set({ minSpend: Number(e.target.value) })} />
+            <NumberInput min="0" value={form.minSpend} onChange={(v) => set({ minSpend: v })} />
           </Field>
           {form.type === 'percent' && (
             <Field label="Maximum discount (৳)" hint="Caps a percentage discount — 0 = uncapped">
-              <Input type="number" min="0" value={form.maxDiscount} onChange={(e) => set({ maxDiscount: Number(e.target.value) })} />
+              <NumberInput min="0" value={form.maxDiscount} onChange={(v) => set({ maxDiscount: v })} />
             </Field>
           )}
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Total usage limit" hint="0 = unlimited">
-            <Input type="number" min="0" value={form.usageLimit} onChange={(e) => set({ usageLimit: Number(e.target.value) })} />
+            <NumberInput min="0" value={form.usageLimit} onChange={(v) => set({ usageLimit: v })} />
           </Field>
           <Field label="Expires on" hint="Optional">
             <Input type="date" value={form.expiresAt ?? ''} onChange={(e) => set({ expiresAt: e.target.value })} />

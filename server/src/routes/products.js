@@ -26,7 +26,7 @@ router.get(
     const { page, limit, skip } = paginate(req.query)
     const {
       category, subcategory, q, tag, minPrice, maxPrice, sort = 'featured',
-      featured, badge, inStock, slugs, onSale,
+      featured, badge, inStock, slugs, onSale, collection,
     } = req.query
 
     const filter = { status: 'active' }
@@ -43,6 +43,12 @@ router.get(
     if (tag) filter.tags = tag
     if (badge) filter.badge = badge
     if (featured === 'true') filter.featured = true
+    /**
+     * `?collection=bestseller` — the products the shop has pinned to a home
+     * page rail. The caller decides what to do when nothing is pinned; the
+     * query itself just answers honestly.
+     */
+    if (collection) filter.collections = collection
     if (inStock === 'true') filter.stock = { $gt: 0 }
     /**
      * "On sale" is a comparison between two fields, not a flag, so it needs

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { adminApi, api } from '@/lib/api'
 import {
-  AdminPage, Badge, Btn, Card, Field, Input, Select, Spinner, Tabs,
+  AdminPage, Badge, Btn, Card, Field, Input, NumberInput, Select, Spinner, Tabs,
   Textarea, Toggle, useToasts,
 } from '../components/ui'
 import { Icon } from '@/components/ui/Icon'
@@ -21,7 +21,7 @@ const BLANK = {
   colors: [], sizes: [],
   stock: 0, lowStockThreshold: 5, trackInventory: true,
   badge: '', tags: [],
-  status: 'draft', featured: false,
+  status: 'draft', featured: false, collections: [],
   seo: { metaTitle: '', metaDescription: '', keywords: [] },
 }
 
@@ -77,6 +77,13 @@ function SpecList({ items, onChange }) {
   )
 }
 
+/** Splits on commas and newlines, keeping the spaces inside a tag intact. */
+const parseTags = (text) =>
+  String(text ?? '')
+    .split(/[,\n]/)
+    .map((t) => t.trim())
+    .filter(Boolean)
+
 export default function ProductEdit() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -84,6 +91,7 @@ export default function ProductEdit() {
   const { push, node } = useToasts()
 
   const [form, setForm] = useState(BLANK)
+  const [tagText, setTagText] = useState('')
   const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(!isNew)
   const [saving, setSaving] = useState(false)
@@ -111,7 +119,10 @@ export default function ProductEdit() {
     if (isNew) return
     adminApi
       .get(`/products/admin/${id}`)
-      .then((d) => setForm({ ...BLANK, ...d.product, seo: { ...BLANK.seo, ...d.product.seo } }))
+      .then((d) => {
+        setForm({ ...BLANK, ...d.product, seo: { ...BLANK.seo, ...d.product.seo } })
+        setTagText((d.product.tags ?? []).join(', '))
+      })
       .catch((err) => push(err.message, 'error'))
       .finally(() => setLoading(false))
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -151,6 +162,7 @@ export default function ProductEdit() {
           costPrice: Number(form.costPrice) || 0,
           stock: Number(form.stock) || 0,
           lowStockThreshold: Number(form.lowStockThreshold) || 0,
+          tags: parseTags(tagText),
           details: form.details.filter(Boolean),
           specifications: form.specifications.filter((s) => s.label || s.value),
         }
@@ -247,7 +259,7 @@ export default function ProductEdit() {
                   <Input type="number" min="0" value={form.price} onChange={(e) => set('price', e.target.value)} />
                 </Field>
 
-                <Field label="Compare-at price (৳)" hint="Shown struck through" error={errors.compareAt}>
+                <Field label="Compare-at price (৳)" hint="Optional — shown struck through to mark a sale" error={errors.compareAt}>
                   <Input type="number" min="0" value={form.compareAt} onChange={(e) => set('compareAt', e.target.value)} />
                 </Field>
 
@@ -264,10 +276,19 @@ export default function ProductEdit() {
                   <Input value={form.badge} onChange={(e) => set('badge', e.target.value)} placeholder="Bestseller / New / Gift" />
                 </Field>
 
-                <Field label="Tags" hint="Comma separated">
+                {/**
+                  * The typed text lives in its own state and is only split on
+                  * blur. Parsing every keystroke made the comma impossible to
+                  * type: the value shown was `array.join(', ')`, so the moment
+                  * you typed "," the split produced an empty last entry,
+                  * filter(Boolean) dropped it, and the join put the text back
+                  * without your comma.
+                  */}
+                <Field label="Tags" hint="Separate with commas">
                   <Input
-                    value={form.tags.join(', ')}
-                    onChange={(e) => set('tags', e.target.value.split(',').map((t) => t.trim()).filter(Boolean))}
+                    value={tagText}
+                    onChange={(e) => setTagText(e.target.value)}
+                    onBlur={() => set('tags', parseTags(tagText))}
                     placeholder="bestseller, everyday"
                   />
                 </Field>
@@ -331,26 +352,22 @@ export default function ProductEdit() {
                           onChange={(e) => set('colors', form.colors.map((x, n) => (n === i ? { ...x, name: e.target.value } : x)))}
                           placeholder="Dusty Rose"
                         />
-                        <Input
-                          type="number"
-                          min="0"
-                          value={c.stock ?? 0}
-                          onChange={(e) => set('colors', form.colors.map((x, n) => (n === i ? { ...x, stock: Number(e.target.value) } : x)))}
-                          className="w-24"
-                          placeholder="Qty"
-                        />
+
                         <Btn size="sm" variant="ghost" onClick={() => set('colors', form.colors.filter((_, n) => n !== i))} aria-label="Remove">
                           <Icon name="trash" size={14} />
                         </Btn>
                       </div>
                     ))}
-                    <Btn size="xs" onClick={() => set('colors', [...form.colors, { name: '', hex: '#c4787f', stock: 0 }])}>
+                    <Btn size="xs" onClick={() => set('colors', [...form.colors, { name: '', hex: '#c4787f' }])}>
                       <Icon name="plus" size={12} /> Add colour
                     </Btn>
                   </div>
                 </Field>
 
-                <Field label="Sizes / volumes" hint="Price delta is added to the base price">
+                <Field
+                  label="Sizes / volumes"
+                  hint="Extra cost is added to the selling price — leave at 0 when every size costs the same"
+                >
                   <div className="space-y-2">
                     {form.sizes.map((s, i) => (
                       <div key={i} className="flex items-center gap-2">
@@ -359,27 +376,23 @@ export default function ProductEdit() {
                           onChange={(e) => set('sizes', form.sizes.map((x, n) => (n === i ? { ...x, label: e.target.value } : x)))}
                           placeholder="100 ml"
                         />
-                        <Input
-                          type="number"
-                          value={s.priceDelta ?? 0}
-                          onChange={(e) => set('sizes', form.sizes.map((x, n) => (n === i ? { ...x, priceDelta: Number(e.target.value) } : x)))}
-                          className="w-28"
-                          placeholder="+৳"
-                        />
-                        <Input
-                          type="number"
-                          min="0"
-                          value={s.stock ?? 0}
-                          onChange={(e) => set('sizes', form.sizes.map((x, n) => (n === i ? { ...x, stock: Number(e.target.value) } : x)))}
-                          className="w-24"
-                          placeholder="Qty"
+                        {/* One number, not two unlabelled ones. The second was
+                            a per-size stock count that nothing ever read — the
+                            server checks the product's own stock — so it added
+                            nothing but ambiguity. */}
+                        <NumberInput
+                          value={s.priceDelta}
+                          onChange={(v) => set('sizes', form.sizes.map((x, n) => (n === i ? { ...x, priceDelta: v } : x)))}
+                          className="w-40"
+                          placeholder="Extra cost ৳"
+                          aria-label="Extra cost for this size"
                         />
                         <Btn size="sm" variant="ghost" onClick={() => set('sizes', form.sizes.filter((_, n) => n !== i))} aria-label="Remove">
                           <Icon name="trash" size={14} />
                         </Btn>
                       </div>
                     ))}
-                    <Btn size="xs" onClick={() => set('sizes', [...form.sizes, { label: '', priceDelta: 0, stock: 0 }])}>
+                    <Btn size="xs" onClick={() => set('sizes', [...form.sizes, { label: '', priceDelta: 0 }])}>
                       <Icon name="plus" size={12} /> Add size
                     </Btn>
                   </div>
@@ -491,13 +504,52 @@ export default function ProductEdit() {
                 <option value="archived">Archived</option>
               </Select>
             </Field>
-            <div className="mt-4">
+            <div className="mt-4 space-y-3">
               <Toggle
                 checked={form.featured}
                 onChange={(v) => set('featured', v)}
                 label="Featured product"
                 description="Pushed to the top of category and home listings"
               />
+
+              {/**
+                * The "What is moving fastest" tabs on the home page. Left
+                * alone, those two rails are worked out automatically — by
+                * units sold and by newest first — which says nothing useful
+                * on a shop that has just opened. Pinning any product takes
+                * that rail over completely.
+                */}
+              <div className="border-t border-ink/8 pt-3">
+                <p className="text-[0.8125rem] font-medium">Show on the home page</p>
+                <p className="mt-0.5 text-[0.75rem] leading-relaxed text-ink/50">
+                  Under “What is moving fastest”. Pin nothing and the shop picks automatically;
+                  pin anything and the rail shows exactly what you pin.
+                </p>
+                <div className="mt-2.5 space-y-2">
+                  {[
+                    { id: 'bestseller', label: 'Bestsellers' },
+                    { id: 'new-arrival', label: 'New arrivals' },
+                  ].map(({ id, label }) => (
+                    <Toggle
+                      key={id}
+                      checked={(form.collections ?? []).includes(id)}
+                      onChange={(v) =>
+                        set(
+                          'collections',
+                          v
+                            ? [...new Set([...(form.collections ?? []), id])]
+                            : (form.collections ?? []).filter((c) => c !== id),
+                        )
+                      }
+                      label={label}
+                    />
+                  ))}
+                  <p className="text-[0.75rem] leading-relaxed text-ink/45">
+                    “On offer” needs no switch — a product appears there whenever its
+                    compare-at price is above its selling price.
+                  </p>
+                </div>
+              </div>
             </div>
           </Card>
 

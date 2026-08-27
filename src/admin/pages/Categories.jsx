@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { adminApi, api } from '@/lib/api'
 import { invalidateCategories } from '@/hooks/useCategories'
 import {
-  AdminPage, Badge, Btn, Card, Field, Input, Modal,
+  AdminPage, Badge, Btn, Card, Field, Input, NumberInput, Modal,
   Spinner, Table, Td, Textarea, Toggle, useToasts,
 } from '../components/ui'
 import { Icon } from '@/components/ui/Icon'
@@ -308,7 +308,7 @@ function CategoryEditor({ category, onClose, onSaved, onError }) {
 
         <div className="grid gap-4">
           <Field label="Sort order" hint="Lower shows first">
-            <Input type="number" value={form.order} onChange={(e) => setForm((f) => ({ ...f, order: Number(e.target.value) }))} />
+            <NumberInput value={form.order} onChange={(v) => setForm((f) => ({ ...f, order: v }))} />
           </Field>
           <div className="flex items-end gap-5 pb-2">
             <Toggle checked={form.active} onChange={(v) => setForm((f) => ({ ...f, active: v }))} label="Visible" />

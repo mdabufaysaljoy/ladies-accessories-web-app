@@ -5,6 +5,7 @@ import { Icon } from '@/components/ui/Icon'
 import { ProductArt } from '@/components/product/ProductArt'
 import { ROUTINE_STEPS } from '@/data/content'
 import { useProductsBySlug, useBestsellers } from '@/hooks/useCatalog'
+import { useSettings } from '@/context/SettingsContext'
 import { useStore } from '@/context/StoreContext'
 import { useReveal } from '@/hooks/useReveal'
 import { taka } from '@/utils/format'
@@ -14,12 +15,13 @@ export function RoutineSteps() {
   const { addToCart, toast } = useStore()
 
   /**
-   * The three slugs are the shop's editorial choice, but a real catalogue may
-   * not contain them — they were seed-data slugs. Fall back to bestsellers so
-   * the bundle is always three products the shop actually sells, and hide the
-   * section entirely when there are not three to offer.
+   * The three products the admin chose in Settings, falling back to
+   * bestsellers for any slot left on Auto. The bundle only makes sense with
+   * three, so the section hides itself when the shop cannot fill it.
    */
-  const pinned = useProductsBySlug(ROUTINE_STEPS.map((s) => s.productSlug))
+  const { storefront } = useSettings()
+  const chosen = (storefront?.routineProducts ?? []).filter(Boolean)
+  const pinned = useProductsBySlug(chosen)
   const { products: fallback, loading } = useBestsellers(3)
   const products = pinned.length === ROUTINE_STEPS.length ? pinned : fallback.slice(0, 3)
 

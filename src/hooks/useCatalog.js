@@ -173,8 +173,30 @@ function useRail(params, limit) {
   return state
 }
 
-export const useBestsellers = (limit = 8) => useRail({ sort: 'bestselling' }, limit)
-export const useNewArrivals = (limit = 8) => useRail({ sort: 'new' }, limit)
+/**
+ * A rail the shop can curate.
+ *
+ * If any product has been pinned to this collection in the admin, the rail is
+ * exactly those products. If none has, it falls back to the automatic
+ * ordering — units sold, or newest first — so a shop that has not curated
+ * anything still gets a sensible home page.
+ */
+function useCuratedRail(collection, autoParams, limit) {
+  const pinned = useRail({ collection }, limit)
+  const auto = useRail(autoParams, limit)
+
+  // Wait for the pinned query before deciding, or the rail would flash the
+  // automatic list and then replace it.
+  if (pinned.loading) return { products: [], loading: true, total: 0 }
+  return pinned.total > 0 ? pinned : auto
+}
+
+export const useBestsellers = (limit = 8) =>
+  useCuratedRail('bestseller', { sort: 'bestselling' }, limit)
+
+export const useNewArrivals = (limit = 8) =>
+  useCuratedRail('new-arrival', { sort: 'new' }, limit)
+
 export const useOnSale = (limit = 8) => useRail({ onSale: 'true' }, limit)
 
 /**

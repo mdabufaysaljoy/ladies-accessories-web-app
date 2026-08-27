@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { adminApi } from '@/lib/api'
 import {
-  AdminPage, Badge, Btn, Card, ConfirmDialog, EmptyRow, Field, Input,
+  AdminPage, Badge, Btn, Card, ConfirmDialog, EmptyRow, Field, Input, NumberInput,
   Modal, Select, Spinner, Textarea, Toggle, useToasts,
 } from '../components/ui'
 import { MediaPicker } from '../components/ImageManager'
@@ -380,7 +380,7 @@ function OfferEditor({ offer, onClose, onSave, isNew }) {
             <Input value={form.badge} onChange={set('badge')} placeholder="Gifting" />
           </Field>
           <Field label="Sort order">
-            <Input type="number" value={form.order} onChange={(e) => setForm((f) => ({ ...f, order: Number(e.target.value) }))} />
+            <NumberInput value={form.order} onChange={(v) => setForm((f) => ({ ...f, order: v }))} />
           </Field>
         </div>
 

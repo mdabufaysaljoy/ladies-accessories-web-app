@@ -40,8 +40,14 @@ const productSchema = new mongoose.Schema(
     ],
     art: { shape: { type: String, default: 'jar' }, hue: { type: Number, default: 320 } },
 
-    colors: [{ name: String, hex: String, stock: { type: Number, default: 0 } }],
-    sizes: [{ label: String, priceDelta: { type: Number, default: 0 }, stock: { type: Number, default: 0 } }],
+    colors: [{ name: String, hex: String }],   // stock is tracked on the product, not per colour
+    /**
+     * A size changes the price, not the stock ledger. The per-size `stock`
+     * that used to live here was never read — availability is checked against
+     * the product's own `stock` — so it only invited the shop to maintain a
+     * number that did nothing.
+     */
+    sizes: [{ label: String, priceDelta: { type: Number, default: 0 } }],
 
     stock: { type: Number, default: 0, min: 0 },
     lowStockThreshold: { type: Number, default: 5 },
@@ -57,6 +63,18 @@ const productSchema = new mongoose.Schema(
 
     status: { type: String, enum: ['active', 'draft', 'archived'], default: 'active', index: true },
     featured: { type: Boolean, default: false },
+
+    /**
+     * Home-page rails this product is pinned to.
+     *
+     * Bestsellers and new arrivals are otherwise derived — by units sold and
+     * by creation date — which is right for an established shop but gives a
+     * new one no say at all. Pinning overrides the automatic ordering for that
+     * rail; pinning nothing leaves it automatic. "On offer" is deliberately
+     * absent: that rail is defined by having a compare-at price above the
+     * selling price, which is already an explicit choice.
+     */
+    collections: [{ type: String, enum: ['bestseller', 'new-arrival'] }],
     order: { type: Number, default: 0 },
 
     seo: { metaTitle: String, metaDescription: String, keywords: [String] },

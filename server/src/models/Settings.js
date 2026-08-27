@@ -365,6 +365,13 @@ const settingsSchema = new mongoose.Schema(
       heroProducts: [{ type: String }],
       heroBadge: { type: String, default: 'New season hijabs just landed' },
       /**
+       * The three products in the "routine" bundle and the one behind the
+       * story panel, by slug. Empty falls back to bestsellers, so both
+       * sections still render on a shop that has not chosen yet.
+       */
+      routineProducts: [{ type: String }],
+      storyProduct: { type: String, default: '' },
+      /**
        * The "Shop by category" band on the home page. On by default — it is
        * how most visitors start browsing — but a shop with only one or two
        * categories is better off without it.

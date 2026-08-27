@@ -104,6 +104,49 @@ export const Input = ({ className = '', ...p }) => (
   <input className={cx(inputBase, 'h-10', className)} {...p} />
 )
 
+/**
+ * A number field that can actually be emptied.
+ *
+ * `<Input type="number" value={n} onChange={e => set(Number(e.target.value))} />`
+ * traps the admin: clearing the box makes `Number('')` evaluate to 0, the
+ * parent stores 0, and it re-renders as "0" before the next keystroke. To type
+ * 25 you have to select the zero first, and a field you want to leave blank
+ * cannot be left blank.
+ *
+ * The keystrokes live here instead. The parent is handed a number, or '' while
+ * the box is empty, and only genuine outside changes — loading a record,
+ * resetting the form — overwrite what is being typed.
+ */
+export function NumberInput({ value, onChange, className = '', ...rest }) {
+  const toText = (v) => (v === null || v === undefined || v === '' ? '' : String(v))
+  const [text, setText] = useState(() => toText(value))
+  const emitted = useRef(value)
+
+  useEffect(() => {
+    // Ignore the echo of our own onChange, or an empty box would refill itself.
+    if (value === emitted.current) return
+    emitted.current = value
+    setText(toText(value))
+  }, [value])
+
+  return (
+    <input
+      {...rest}
+      type="number"
+      inputMode="decimal"
+      className={cx(inputBase, 'h-10', className)}
+      value={text}
+      onChange={(e) => {
+        const raw = e.target.value
+        setText(raw)
+        const next = raw === '' ? '' : Number(raw)
+        emitted.current = next
+        onChange(next)
+      }}
+    />
+  )
+}
+
 export const Textarea = ({ className = '', rows = 4, ...p }) => (
   <textarea rows={rows} className={cx(inputBase, 'resize-y py-2.5 leading-relaxed', className)} {...p} />
 )

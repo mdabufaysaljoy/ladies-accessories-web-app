@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { API_BASE, adminApi } from '@/lib/api'
 import {
-  AdminPage, Badge, Btn, Card, Field, Input, Select, Spinner,
+  AdminPage, Badge, Btn, Card, Field, Input, NumberInput, Select, Spinner,
   Tabs, Textarea, Toggle, useToasts,
 } from '../components/ui'
 import { Icon } from '@/components/ui/Icon'
@@ -430,6 +430,48 @@ export default function SettingsPage() {
                 </div>
               </Field>
 
+              {/* The three-product bundle further down the home page. */}
+              <Field
+                label="Routine bundle products"
+                hint="The three products in “A routine that actually fits humid weather”. Leave on Auto to use your bestsellers; the section hides itself if fewer than three are available."
+              >
+                <div className="space-y-2">
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <span className="w-28 shrink-0 text-[0.75rem] text-ink/50">Step {i + 1}</span>
+                      <Select
+                        value={data.storefront.routineProducts?.[i] ?? ''}
+                        onChange={(e) => {
+                          const next = [...(data.storefront.routineProducts ?? ['', '', ''])]
+                          next[i] = e.target.value
+                          set('storefront', { routineProducts: next })
+                        }}
+                      >
+                        <option value="">Auto — use a bestseller</option>
+                        {catalogue.map((p) => (
+                          <option key={p._id} value={p.slug}>{p.name}</option>
+                        ))}
+                      </Select>
+                    </div>
+                  ))}
+                </div>
+              </Field>
+
+              <Field
+                label="“Our story” product"
+                hint="The product pictured beside the story panel. Auto uses your best seller."
+              >
+                <Select
+                  value={data.storefront.storyProduct ?? ''}
+                  onChange={(e) => set('storefront', { storyProduct: e.target.value })}
+                >
+                  <option value="">Auto — use a bestseller</option>
+                  {catalogue.map((p) => (
+                    <option key={p._id} value={p.slug}>{p.name}</option>
+                  ))}
+                </Select>
+              </Field>
+
               <Field label="Badge text" hint="The small pill above the headline">
                 <Input
                   value={data.storefront.heroBadge ?? ''}
@@ -640,21 +682,21 @@ export default function SettingsPage() {
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label={`Quality (${data.media?.quality ?? 78})`} hint="78 is visually lossless for photos">
-                    <Input
+                    <NumberInput
                       type="range"
                       min={40}
                       max={100}
                       value={data.media?.quality ?? 78}
-                      onChange={(e) => set('media', { quality: Number(e.target.value) })}
+                      onChange={(v) => set('media', { quality: v })}
                     />
                   </Field>
                   <Field label="Maximum width" hint="Longest edge, in pixels">
-                    <Input
-                      type="number"
+                    <NumberInput
+                     
                       min={600}
                       max={4000}
                       value={data.media?.maxWidth ?? 2000}
-                      onChange={(e) => set('media', { maxWidth: Number(e.target.value) })}
+                      onChange={(v) => set('media', { maxWidth: v })}
                     />
                   </Field>
                 </div>
@@ -814,7 +856,7 @@ export default function SettingsPage() {
                 <div className="space-y-2">
                   <div className="flex gap-2">
                     <Input value={item.label ?? ''} onChange={(e) => patch({ label: e.target.value })} placeholder="Inside Dhaka City" />
-                    <Input type="number" value={item.charge ?? 0} onChange={(e) => patch({ charge: Number(e.target.value) })} className="w-24" placeholder="৳" />
+                    <NumberInput value={item.charge ?? 0} onChange={(v) => patch({ charge: v })} className="w-24" placeholder="৳" />
                   </div>
                   <div className="flex gap-2">
                     <Input value={item.eta ?? ''} onChange={(e) => patch({ eta: e.target.value })} placeholder="1–2 working days" />
@@ -834,18 +876,18 @@ export default function SettingsPage() {
             <Card title="Thresholds">
               <div className="space-y-4">
                 <Field label="Free delivery above (৳)" hint="Set 0 to always charge">
-                  <Input type="number" value={data.delivery.freeShippingThreshold} onChange={(e) => set('delivery', { freeShippingThreshold: Number(e.target.value) })} />
+                  <NumberInput value={data.delivery.freeShippingThreshold} onChange={(v) => set('delivery', { freeShippingThreshold: v })} />
                 </Field>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label="COD advance required above (৳)" hint="Protects against refused parcels">
-                    <Input type="number" value={data.delivery.codAdvanceThreshold} onChange={(e) => set('delivery', { codAdvanceThreshold: Number(e.target.value) })} />
+                    <NumberInput value={data.delivery.codAdvanceThreshold} onChange={(v) => set('delivery', { codAdvanceThreshold: v })} />
                   </Field>
                   <Field label="Advance amount (৳)">
-                    <Input type="number" value={data.delivery.codAdvanceAmount} onChange={(e) => set('delivery', { codAdvanceAmount: Number(e.target.value) })} />
+                    <NumberInput value={data.delivery.codAdvanceAmount} onChange={(v) => set('delivery', { codAdvanceAmount: v })} />
                   </Field>
                 </div>
                 <Field label="Return window (days)">
-                  <Input type="number" value={data.delivery.returnWindowDays} onChange={(e) => set('delivery', { returnWindowDays: Number(e.target.value) })} className="w-32" />
+                  <NumberInput value={data.delivery.returnWindowDays} onChange={(v) => set('delivery', { returnWindowDays: v })} className="w-32" />
                 </Field>
               </div>
             </Card>
@@ -895,11 +937,11 @@ export default function SettingsPage() {
                   </Select>
                 </Field>
                 <Field label="Status check interval (minutes)" hint="0 turns polling off">
-                  <Input
-                    type="number"
+                  <NumberInput
+                   
                     min="0"
                     value={data.couriers.statusSyncMinutes}
-                    onChange={(e) => set('couriers', { statusSyncMinutes: Number(e.target.value) })}
+                    onChange={(v) => set('couriers', { statusSyncMinutes: v })}
                   />
                 </Field>
               </div>
@@ -1070,10 +1112,10 @@ export default function SettingsPage() {
                 />
               </Field>
               <Field label="Next number" hint="Increments automatically">
-                <Input
-                  type="number"
+                <NumberInput
+                 
                   value={data.invoice.nextNumber}
-                  onChange={(e) => set('invoice', { nextNumber: Number(e.target.value) })}
+                  onChange={(v) => set('invoice', { nextNumber: v })}
                 />
               </Field>
               <Field label="Footer note" className="sm:col-span-2">
@@ -1545,7 +1587,7 @@ export default function SettingsPage() {
                   <Input value={data.integrations.email.smtpHost ?? ''} onChange={(e) => setDeep('integrations', 'email', { smtpHost: e.target.value })} placeholder="smtp.gmail.com" />
                 </Field>
                 <Field label="Port">
-                  <Input type="number" value={data.integrations.email.smtpPort} onChange={(e) => setDeep('integrations', 'email', { smtpPort: Number(e.target.value) })} />
+                  <NumberInput value={data.integrations.email.smtpPort} onChange={(v) => setDeep('integrations', 'email', { smtpPort: v })} />
                 </Field>
               </div>
               <Field label="SMTP username">

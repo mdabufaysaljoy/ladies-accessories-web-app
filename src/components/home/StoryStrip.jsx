@@ -1,7 +1,8 @@
 import { Button } from '@/components/ui/Button'
 import { Icon } from '@/components/ui/Icon'
 import { ProductArt } from '@/components/product/ProductArt'
-import { useBestsellers } from '@/hooks/useCatalog'
+import { useBestsellers, useProductsBySlug } from '@/hooks/useCatalog'
+import { useSettings } from '@/context/SettingsContext'
 import { useReveal } from '@/hooks/useReveal'
 
 const PILLARS = [
@@ -24,8 +25,11 @@ const PILLARS = [
 
 export function StoryStrip() {
   const ref = useReveal({ stagger: 100 })
-  // Was pinned to a seed-data slug that no real catalogue contains.
-  const hero = useBestsellers(1).products[0]
+  // The product the admin picked in Settings, or the best seller on Auto.
+  const { storefront } = useSettings()
+  const chosen = useProductsBySlug(storefront?.storyProduct ? [storefront.storyProduct] : [])
+  const best = useBestsellers(1).products[0]
+  const hero = chosen[0] ?? best
 
   return (
     <section ref={ref} className="py-16 md:py-24">
