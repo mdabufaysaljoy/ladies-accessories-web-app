@@ -17,7 +17,7 @@ const FALLBACK_STATS = [
 
 export function Hero() {
   const ref = useReveal({ stagger: 110 })
-  const { storefront, tf } = useSettings()
+  const { storefront } = useSettings()
 
   // Every word and every product here is set in Settings → Storefront.
   const { main: featured, secondary, tertiary } = useHeroProducts(storefront.heroProducts)
@@ -44,11 +44,11 @@ export function Hero() {
             </p>
 
             <h1 className="reveal mt-6 text-[2.75rem] leading-[0.98] tracking-[-0.03em] sm:text-[3.5rem] lg:text-[4.25rem] text-balance-pretty">
-              {tf(storefront, 'heroHeadline')}
+              {storefront.heroHeadline}
             </h1>
 
             <p className="reveal mt-6 max-w-lg text-[1.0625rem] leading-relaxed text-ink/65 text-balance-pretty">
-              {tf(storefront, 'heroSubtext')}
+              {storefront.heroSubtext}
             </p>
 
             <div className="reveal mt-9 flex flex-wrap items-center gap-3">

@@ -44,10 +44,10 @@ const buildChannels = (contact, waLink) => [
 
 export default function Contact() {
   const { toast } = useStore()
-  const { contact, faqs, tf } = useSettings()
+  const { contact, faqs } = useSettings()
   const waLink = useWhatsAppLink()
   const CHANNELS = buildChannels(contact, waLink)
-  const faqItems = (faqs.length ? faqs : FALLBACK_FAQS).map((f) => ({ q: tf(f, 'q'), a: tf(f, 'a') }))
+  const faqItems = (faqs.length ? faqs : FALLBACK_FAQS).map((f) => ({ q: f.q, a: f.a }))
   const [form, setForm] = useState({ name: '', phone: '', email: '', topic: TOPICS[0], message: '' })
   const [errors, setErrors] = useState({})
   const [sent, setSent] = useState(false)
@@ -250,7 +250,7 @@ export default function Contact() {
               </span>
               <h2 className="mt-4 text-[1.125rem] tracking-tight font-display">Studio</h2>
               <address className="mt-1.5 text-[0.8125rem] not-italic leading-relaxed text-ink/60">
-                {tf(contact, 'address')}
+                {contact.address}
               </address>
               <p className="mt-3 text-[0.75rem] text-ink/45">
                 Pickup by appointment only — message us first.

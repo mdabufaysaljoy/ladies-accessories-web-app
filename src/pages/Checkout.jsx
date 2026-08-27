@@ -210,7 +210,7 @@ function OrderSummary({ collapsible = false }) {
 export default function Checkout() {
   const navigate = useNavigate()
   const { lines, totals, coupon, zone, zoneId, setZoneId, clearCart, placeOrder, toast } = useStore()
-  const { zones, delivery, isBn, checkout: checkoutForm } = useSettings()
+  const { zones, delivery, checkout: checkoutForm } = useSettings()
   const { customer: account, isSignedIn, defaultAddress } = useAccount()
   const [saved, setSaved] = useLocalStorage('gbs.customer', BLANK)
   const [saveAddress, setSaveAddress] = useState(true)
@@ -751,10 +751,10 @@ export default function Checkout() {
                         </span>
                         <span className="min-w-0 flex-1">
                           <span className="block text-[0.9375rem] font-medium">
-                            {isBn && z.labelBn ? z.labelBn : z.label}
+                            {z.label}
                           </span>
                           <span className="mt-0.5 flex items-center gap-1.5 text-[0.8125rem] text-ink/55">
-                            <Icon name="clock" size={13} /> {isBn && z.etaBn ? z.etaBn : z.eta}
+                            <Icon name="clock" size={13} /> {z.eta}
                           </span>
                         </span>
                         <span className="shrink-0 text-[0.9375rem] font-semibold">
@@ -882,7 +882,7 @@ export default function Checkout() {
                           <span className="min-w-0 flex-1">
                             <span className="flex flex-wrap items-center gap-2">
                               <span className="text-[0.9375rem] font-semibold">
-                                {isBn && m.nameBn ? m.nameBn : m.name}
+                                {m.name}
                               </span>
                               {m.badge && (
                                 <span className="rounded-full bg-blush px-2.5 py-0.5 text-[0.625rem] font-semibold uppercase tracking-[0.1em] text-plum">
@@ -891,7 +891,7 @@ export default function Checkout() {
                               )}
                             </span>
                             <span className="mt-1 block text-[0.8125rem] text-ink/60">
-                              {isBn && m.taglineBn ? m.taglineBn : m.tagline}
+                              {m.tagline}
                             </span>
                           </span>
                           <Icon

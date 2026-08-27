@@ -116,7 +116,6 @@ const normaliseHeader = (raw) => String(raw ?? '').trim().toLowerCase().replace(
  */
 const FIELD_ALIASES = {
   name: 'name', title: 'name', productname: 'name',
-  namebn: 'nameBn',
   slug: 'slug', handle: 'slug', url: 'slug',
   sku: 'sku', code: 'sku',
   category: 'category',
@@ -125,10 +124,8 @@ const FIELD_ALIASES = {
   compareat: 'compareAt', compareatprice: 'compareAt', mrp: 'compareAt', oldprice: 'compareAt',
   costprice: 'costPrice', cost: 'costPrice', buyingprice: 'costPrice',
   short: 'short', shortdescription: 'short', tagline: 'short',
-  shortbn: 'shortBn',
   description: 'description', longdescription: 'description', fulldescription: 'description',
   body: 'description', content: 'description',
-  descriptionbn: 'descriptionBn',
   care: 'care', howtouse: 'care', usage: 'care',
   // `details` is the bullet list under "Details & specification" — the same
   // meaning the template column has. It must not alias to `description`, or a
@@ -297,7 +294,6 @@ export function buildProduct(row, { categorySlugs }) {
   const hue = asNumber(row.artHue)
   const payload = {
     name,
-    nameBn: asString(row.nameBn),
     ...(asString(row.slug) ? { slug: slugify(asString(row.slug)) } : {}),
     sku: asString(row.sku),
     category,
@@ -306,9 +302,7 @@ export function buildProduct(row, { categorySlugs }) {
     compareAt,
     costPrice: asNumber(row.costPrice) ?? 0,
     short: asString(row.short),
-    shortBn: asString(row.shortBn),
     description: asString(row.description),
-    descriptionBn: asString(row.descriptionBn),
     care: asString(row.care),
     details: asList(row.details),
     specifications: asSpecifications(row.specifications),

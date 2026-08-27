@@ -12,7 +12,6 @@ const SettingsContext = createContext(null)
 const FALLBACK = {
   brand: {
     name: BRAND.name,
-    nameBn: 'গুডস বাই সাদিয়া',
     tagline: BRAND.tagline,
     logoMark: 'S',
     logoUrl: '',
@@ -41,8 +40,6 @@ const FALLBACK = {
   },
   payments: { cod: { enabled: true }, bkashManual: { enabled: false }, sslcommerz: { enabled: false }, bkash: { enabled: false }, nagadManual: { enabled: false } },
   storefront: {
-    language: 'en',
-    allowLanguageToggle: true,
     currencySymbol: '৳',
     maintenanceMode: false,
     showQuickOrder: true,
@@ -72,19 +69,10 @@ const FALLBACK = {
   },
 }
 
-const LANG_KEY = 'gbs.lang'
-
 export function SettingsProvider({ children }) {
   const [settings, setSettings] = useState(FALLBACK)
   const [loading, setLoading] = useState(true)
   const [online, setOnline] = useState(false)
-  const [lang, setLangState] = useState(() => {
-    try {
-      return localStorage.getItem(LANG_KEY) ?? 'en'
-    } catch {
-      return 'en'
-    }
-  })
 
   const load = useCallback(async () => {
     try {
@@ -103,32 +91,6 @@ export function SettingsProvider({ children }) {
     load()
   }, [load])
 
-  const setLang = useCallback((next) => {
-    setLangState(next)
-    try {
-      localStorage.setItem(LANG_KEY, next)
-    } catch {
-      /* ignore */
-    }
-    document.documentElement.lang = next
-  }, [])
-
-  useEffect(() => {
-    document.documentElement.lang = lang
-  }, [lang])
-
-  /** Picks the Bangla variant of a field when the site is in Bangla. */
-  const tf = useCallback(
-    (obj, field) => {
-      if (!obj) return ''
-      if (lang === 'bn') {
-        const bnField = `${field}Bn`
-        if (obj[bnField]) return obj[bnField]
-      }
-      return obj[field] ?? ''
-    },
-    [lang],
-  )
 
   const value = useMemo(
     () => ({
@@ -136,10 +98,6 @@ export function SettingsProvider({ children }) {
       loading,
       online,
       reload: load,
-      lang,
-      setLang,
-      isBn: lang === 'bn',
-      tf,
       brand: settings.brand ?? FALLBACK.brand,
       contact: settings.contact ?? FALLBACK.contact,
       socials: (settings.socials ?? []).filter((s) => s.enabled !== false),
@@ -156,7 +114,7 @@ export function SettingsProvider({ children }) {
       /** Which fields the checkout asks for — see Settings → Checkout form. */
       checkout: { ...FALLBACK.checkout, ...(settings.checkout ?? {}) },
     }),
-    [settings, loading, online, load, lang, setLang, tf],
+    [settings, loading, online, load],
   )
 
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>

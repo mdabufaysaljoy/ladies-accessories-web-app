@@ -8,17 +8,17 @@ import { FAQS as FALLBACK_FAQS } from '@/data/content'
 
 export default function Faq() {
   const [query, setQuery] = useState('')
-  const { faqs, tf } = useSettings()
+  const { faqs } = useSettings()
   const waLink = useWhatsAppLink()
   const source = faqs.length ? faqs : FALLBACK_FAQS
   usePageMeta('FAQ', 'Delivery times, cash on delivery, SSLCommerz payment, returns and product advice.')
 
   const results = useMemo(() => {
-    const list = source.map((f) => ({ q: tf(f, 'q'), a: tf(f, 'a') }))
+    const list = source.map((f) => ({ q: f.q, a: f.a }))
     const q = query.trim().toLowerCase()
     if (!q) return list
     return list.filter((f) => `${f.q} ${f.a}`.toLowerCase().includes(q))
-  }, [query, source, tf])
+  }, [query, source])
 
   return (
     <>

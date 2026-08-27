@@ -3,8 +3,8 @@ import { useSettings } from '@/context/SettingsContext'
 import { cx } from '@/utils/format'
 
 export function Logo({ className = '', compact = false }) {
-  const { brand, tf } = useSettings()
-  const name = tf(brand, 'name')
+  const { brand } = useSettings()
+  const name = brand.name
 
   return (
     <Link

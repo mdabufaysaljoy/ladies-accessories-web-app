@@ -6,7 +6,7 @@ import { useSettings } from '@/context/SettingsContext'
  * without a visible seam. Messages come from the admin panel.
  */
 export function AnnouncementBar() {
-  const { announcements, tf } = useSettings()
+  const { announcements } = useSettings()
   if (!announcements.length) return null
 
   const items = [...announcements, ...announcements]
@@ -17,7 +17,7 @@ export function AnnouncementBar() {
         {items.map((item, i) => (
           <span key={i} className="flex items-center gap-3 text-[0.75rem] tracking-wide text-cream/85">
             <Icon name="sparkle" size={12} className="text-gold" fill />
-            {tf(item, 'text')}
+            {item.text}
           </span>
         ))}
       </div>

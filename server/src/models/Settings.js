@@ -18,9 +18,7 @@ const settingsSchema = new mongoose.Schema(
 
     brand: {
       name: { type: String, default: 'Goods by Sadia' },
-      nameBn: { type: String, default: 'গুডস বাই সাদিয়া' },
       tagline: { type: String, default: 'Hijabs, skin & colour — chosen with care.' },
-      taglineBn: { type: String, default: 'হিজাব, স্কিনকেয়ার ও কসমেটিকস — যত্ন করে বাছাই করা।' },
       logoUrl: { type: String, default: '' },
       logoMark: { type: String, default: 'S' },
       faviconUrl: { type: String, default: '' },
@@ -48,7 +46,6 @@ const settingsSchema = new mongoose.Schema(
       email: { type: String, default: 'hello@goodsbysadia.com' },
       supportEmail: { type: String, default: 'support@goodsbysadia.com' },
       address: { type: String, default: 'House 42, Road 11, Banani, Dhaka 1213, Bangladesh' },
-      addressBn: { type: String, default: 'বাড়ি ৪২, রোড ১১, বনানী, ঢাকা ১২১৩' },
       mapUrl: { type: String, default: '' },
       hours: { type: String, default: 'Sat–Thu, 10:00 – 20:00' },
       tradeLicence: { type: String, default: 'TRAD/DNCC/024518/2021' },
@@ -64,7 +61,7 @@ const settingsSchema = new mongoose.Schema(
       },
     ],
 
-    announcements: [{ text: String, textBn: String, enabled: { type: Boolean, default: true } }],
+    announcements: [{ text: String, enabled: { type: Boolean, default: true } }],
 
     delivery: {
       freeShippingThreshold: { type: Number, default: 2000 },
@@ -74,10 +71,8 @@ const settingsSchema = new mongoose.Schema(
         {
           id: String,
           label: String,
-          labelBn: String,
           charge: Number,
           eta: String,
-          etaBn: String,
           enabled: { type: Boolean, default: true },
         },
       ],
@@ -347,15 +342,12 @@ const settingsSchema = new mongoose.Schema(
     },
 
     storefront: {
-      language: { type: String, enum: ['en', 'bn'], default: 'en' },
-      allowLanguageToggle: { type: Boolean, default: true },
       currencySymbol: { type: String, default: '৳' },
       maintenanceMode: { type: Boolean, default: false },
       maintenanceMessage: { type: String, default: '' },
       showQuickOrder: { type: Boolean, default: true },
       showWhatsAppFab: { type: Boolean, default: true },
       heroHeadline: { type: String, default: 'Modest style, honest beauty.' },
-      heroHeadlineBn: { type: String, default: 'শালীন স্টাইল, সৎ সৌন্দর্য।' },
       heroSubtext: {
         type: String,
         default:
@@ -395,16 +387,12 @@ const settingsSchema = new mongoose.Schema(
     promotions: {
       enabled: { type: Boolean, default: true },
       heading: { type: String, default: 'Limited time offers' },
-      headingBn: { type: String, default: 'সীমিত সময়ের অফার' },
       subheading: { type: String, default: 'Ends when the timer does — no extensions.' },
       offers: [
         {
           title: String,
-          titleBn: String,
           eyebrow: String,
-          eyebrowBn: String,
           body: String,
-          bodyBn: String,
           ctaLabel: String,
           ctaHref: String,
           badge: String,
@@ -439,7 +427,7 @@ const settingsSchema = new mongoose.Schema(
       },
     ],
 
-    faqs: [{ q: String, a: String, qBn: String, aBn: String }],
+    faqs: [{ q: String, a: String }],
   },
   { timestamps: true },
 )

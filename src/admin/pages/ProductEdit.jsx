@@ -12,10 +12,10 @@ import { VideoManager } from '../components/VideoManager'
 import { slugifyClient, taka } from '@/utils/format'
 
 const BLANK = {
-  name: '', nameBn: '', slug: '', sku: '',
+  name: '', slug: '', sku: '',
   category: '', subcategory: '',
   price: 0, compareAt: 0, costPrice: 0,
-  short: '', shortBn: '', description: '', descriptionBn: '', care: '',
+  short: '', description: '', care: '',
   details: [], specifications: [], images: [], videos: [],
   art: { shape: 'jar', hue: 320 },
   colors: [], sizes: [],
@@ -228,9 +228,6 @@ export default function ProductEdit() {
                   />
                 </Field>
 
-                <Field label="Bangla name" hint="Optional — shown when the site is in Bangla">
-                  <Input value={form.nameBn} onChange={(e) => set('nameBn', e.target.value)} placeholder="সিগনেচার জর্জেট হিজাব" />
-                </Field>
 
                 <Field label="Category" required error={errors.category}>
                   <Select value={form.category} onChange={(e) => { set('category', e.target.value); set('subcategory', '') }}>
@@ -262,9 +259,6 @@ export default function ProductEdit() {
                   <Input value={form.short} onChange={(e) => set('short', e.target.value)} placeholder="Weightless georgette with a soft matte fall." />
                 </Field>
 
-                <Field label="Short description (Bangla)" className="sm:col-span-2">
-                  <Input value={form.shortBn} onChange={(e) => set('shortBn', e.target.value)} placeholder="হালকা জর্জেট, সারাদিন পরে থাকলেও সরে যায় না।" />
-                </Field>
 
                 <Field label="Badge" hint="Corner label on the card">
                   <Input value={form.badge} onChange={(e) => set('badge', e.target.value)} placeholder="Bestseller / New / Gift" />
@@ -284,9 +278,6 @@ export default function ProductEdit() {
               <div className="space-y-6">
                 <Field label="Full description" hint="Shown in the Description accordion">
                   <Textarea rows={7} value={form.description} onChange={(e) => set('description', e.target.value)} />
-                </Field>
-                <Field label="Full description (Bangla)">
-                  <Textarea rows={5} value={form.descriptionBn} onChange={(e) => set('descriptionBn', e.target.value)} />
                 </Field>
                 <Field label="Detail bullets" hint="Ticked list under “Details & specification”">
                   <StringList

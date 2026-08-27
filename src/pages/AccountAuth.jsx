@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/Button'
 import { Icon } from '@/components/ui/Icon'
 import { PageHeader, usePageMeta } from '@/components/common/PageShell'
 import { useAccount } from '@/context/AccountContext'
-import { useSettings } from '@/context/SettingsContext'
 import { cx, isValidBdPhone, isValidEmail, sanitisePhoneInput } from '@/utils/format'
 
 const inputClass = (error) =>
@@ -17,7 +16,6 @@ const inputClass = (error) =>
 export default function AccountAuth({ mode = 'login' }) {
   const isRegister = mode === 'register'
   const { login, register } = useAccount()
-  const { isBn } = useSettings()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -25,9 +23,7 @@ export default function AccountAuth({ mode = 'login' }) {
   const [errors, setErrors] = useState({})
   const [busy, setBusy] = useState(false)
   const [serverError, setServerError] = useState('')
-
-  const t = (en, bn) => (isBn ? bn : en)
-  usePageMeta(isRegister ? t('Create account', 'অ্যাকাউন্ট খুলুন') : t('Sign in', 'সাইন ইন'))
+  usePageMeta(isRegister ? 'Create account' : 'Sign in')
 
   /**
    * Phone boxes only ever hold what a phone number can contain. Stripping as
@@ -44,13 +40,13 @@ export default function AccountAuth({ mode = 'login' }) {
   const submit = async (e) => {
     e.preventDefault()
     const next = {}
-    if (isRegister && form.name.trim().length < 3) next.name = t('Please enter your full name', 'পুরো নাম লিখুন')
-    if (!isValidBdPhone(form.phone)) next.phone = t('Enter a valid mobile number (01XXXXXXXXX)', 'সঠিক মোবাইল নম্বর দিন')
-    if (isRegister && form.email && !isValidEmail(form.email)) next.email = t('That email does not look right', 'ইমেইল সঠিক নয়')
+    if (isRegister && form.name.trim().length < 3) next.name = 'Please enter your full name'
+    if (!isValidBdPhone(form.phone)) next.phone = 'Enter a valid mobile number (01XXXXXXXXX)'
+    if (isRegister && form.email && !isValidEmail(form.email)) next.email = 'That email does not look right'
     if (form.password.length < (isRegister ? 8 : 1)) {
       next.password = isRegister
-        ? t('Password must be at least 8 characters', 'পাসওয়ার্ড কমপক্ষে ৮ অক্ষরের হতে হবে')
-        : t('Enter your password', 'পাসওয়ার্ড দিন')
+        ? 'Password must be at least 8 characters'
+        : 'Enter your password'
     }
 
     setErrors(next)
@@ -71,16 +67,13 @@ export default function AccountAuth({ mode = 'login' }) {
   return (
     <>
       <PageHeader
-        crumbs={[{ label: isRegister ? t('Create account', 'অ্যাকাউন্ট') : t('Sign in', 'সাইন ইন') }]}
-        eyebrow={t('Your account', 'আপনার অ্যাকাউন্ট')}
-        title={isRegister ? t('Create your account', 'অ্যাকাউন্ট খুলুন') : t('Welcome back', 'আবার স্বাগতম')}
+        crumbs={[{ label: isRegister ? 'Create account' : 'Sign in' }]}
+        eyebrow={'Your account'}
+        title={isRegister ? 'Create your account' : 'Welcome back'}
         lead={
           isRegister
-            ? t(
-                'Save your address so checkout takes seconds next time. You can always order without an account.',
-                'ঠিকানা সেভ করে রাখুন — পরেরবার চেকআউট আরও দ্রুত হবে। অ্যাকাউন্ট ছাড়াও অর্ডার করা যায়।',
-              )
-            : t('Sign in to see your orders and saved addresses.', 'অর্ডার ও সেভ করা ঠিকানা দেখতে সাইন ইন করুন।')
+            ? 'Save your address so checkout takes seconds next time. You can always order without an account.'
+            : 'Sign in to see your orders and saved addresses.'
         }
       />
 
@@ -90,12 +83,12 @@ export default function AccountAuth({ mode = 'login' }) {
             {isRegister && (
               <label className="block">
                 <span className="text-[0.8125rem] font-medium text-ink/70">
-                  {t('Full name', 'পুরো নাম')} <span className="text-rose">*</span>
+                  {'Full name'} <span className="text-rose">*</span>
                 </span>
                 <input
                   value={form.name}
                   onChange={set('name')}
-                  placeholder={t('e.g. Nusrat Jahan', 'যেমন নুসরাত জাহান')}
+                  placeholder={'e.g. Nusrat Jahan'}
                   autoComplete="name"
                   className={cx('mt-1.5', inputClass(errors.name))}
                 />
@@ -105,7 +98,7 @@ export default function AccountAuth({ mode = 'login' }) {
 
             <label className="block">
               <span className="text-[0.8125rem] font-medium text-ink/70">
-                {t('Mobile number', 'মোবাইল নম্বর')} <span className="text-rose">*</span>
+                {'Mobile number'} <span className="text-rose">*</span>
               </span>
               <input
                 value={form.phone}
@@ -121,8 +114,8 @@ export default function AccountAuth({ mode = 'login' }) {
             {isRegister && (
               <label className="block">
                 <span className="text-[0.8125rem] font-medium text-ink/70">
-                  {t('Email', 'ইমেইল')}{' '}
-                  <span className="text-ink/40">({t('optional — for invoices', 'ঐচ্ছিক — ইনভয়েসের জন্য')})</span>
+                  {'Email'}{' '}
+                  <span className="text-ink/40">({'optional — for invoices'})</span>
                 </span>
                 <input
                   value={form.email}
@@ -138,7 +131,7 @@ export default function AccountAuth({ mode = 'login' }) {
 
             <label className="block">
               <span className="text-[0.8125rem] font-medium text-ink/70">
-                {t('Password', 'পাসওয়ার্ড')} <span className="text-rose">*</span>
+                {'Password'} <span className="text-rose">*</span>
               </span>
               <input
                 value={form.password}
@@ -159,23 +152,23 @@ export default function AccountAuth({ mode = 'login' }) {
             )}
 
             <Button type="submit" size="lg" full loading={busy}>
-              {isRegister ? t('Create account', 'অ্যাকাউন্ট খুলুন') : t('Sign in', 'সাইন ইন')}
+              {isRegister ? 'Create account' : 'Sign in'}
             </Button>
           </form>
 
           <p className="mt-6 text-center text-[0.875rem] text-ink/60">
             {isRegister ? (
               <>
-                {t('Already have an account?', 'আগে থেকেই অ্যাকাউন্ট আছে?')}{' '}
+                {'Already have an account?'}{' '}
                 <Link to="/login" className="font-medium text-plum underline underline-offset-2">
-                  {t('Sign in', 'সাইন ইন')}
+                  {'Sign in'}
                 </Link>
               </>
             ) : (
               <>
-                {t('New here?', 'নতুন?')}{' '}
+                {'New here?'}{' '}
                 <Link to="/register" className="font-medium text-plum underline underline-offset-2">
-                  {t('Create an account', 'অ্যাকাউন্ট খুলুন')}
+                  {'Create an account'}
                 </Link>
               </>
             )}
@@ -184,13 +177,10 @@ export default function AccountAuth({ mode = 'login' }) {
           <div className="mt-8 rounded-2xl bg-blush px-5 py-4 text-center">
             <p className="text-[0.8125rem] leading-relaxed text-ink/70">
               <Icon name="info" size={14} className="mr-1.5 inline text-plum" />
-              {t(
-                'You never need an account to order — guest checkout works exactly the same.',
-                'অর্ডার করতে অ্যাকাউন্ট লাগে না — গেস্ট চেকআউটেও একইভাবে অর্ডার করা যায়।',
-              )}
+              You never need an account to order — guest checkout works exactly the same.
             </p>
             <Link to="/shop" className="mt-2 inline-block text-[0.8125rem] font-medium text-plum underline underline-offset-2">
-              {t('Continue shopping as a guest', 'গেস্ট হিসেবে কেনাকাটা করুন')}
+              {'Continue shopping as a guest'}
             </Link>
           </div>
         </div>

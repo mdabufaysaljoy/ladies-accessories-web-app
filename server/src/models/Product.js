@@ -4,7 +4,6 @@ import { slugify } from '../utils/helpers.js'
 const productSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true, index: 'text' },
-    nameBn: { type: String, default: '' },
     slug: { type: String, required: true, unique: true, index: true },
     sku: { type: String, default: '', index: true },
 
@@ -16,9 +15,7 @@ const productSchema = new mongoose.Schema(
     costPrice: { type: Number, default: 0, min: 0 }, // margin reporting, never public
 
     short: { type: String, default: '' },
-    shortBn: { type: String, default: '' },
     description: { type: String, default: '' },
-    descriptionBn: { type: String, default: '' },
     care: { type: String, default: '' },
 
     /** Free-form spec bullets shown under "Details & specification". */

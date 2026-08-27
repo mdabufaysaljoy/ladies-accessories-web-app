@@ -4,36 +4,36 @@
  */
 export const CATEGORIES = [
   {
-    slug: 'hijabs', name: 'Hijabs', nameBn: 'হিজাব', order: 1,
-    tagline: 'Drape that holds all day', taglineBn: 'সারাদিন সুন্দর ভাঁজ',
+    slug: 'hijabs', name: 'Hijabs', order: 1,
+    tagline: 'Drape that holds all day',
     blurb: 'Breathable georgette, buttery jersey and premium chiffon — cut generously, hemmed by hand, and colour-matched season after season.',
     art: { shape: 'hijab', hue: 320 },
     subcategories: ['Georgette Hijab', 'Jersey Hijab', 'Chiffon Hijab', 'Instant Hijab', 'Cotton Voile', 'Silk Hijab', 'Inner Cap & Pins'],
   },
   {
-    slug: 'skincare', name: 'Skin Care', nameBn: 'স্কিন কেয়ার', order: 2,
-    tagline: 'Barrier-first, fragrance-light', taglineBn: 'ত্বকের সুরক্ষা আগে',
+    slug: 'skincare', name: 'Skin Care', order: 2,
+    tagline: 'Barrier-first, fragrance-light',
     blurb: 'Gentle actives formulated for humid weather — cleanse, hydrate and protect without stripping your skin barrier.',
     art: { shape: 'dropper', hue: 30 },
     subcategories: ['Cleanser', 'Toner', 'Serum', 'Moisturiser', 'Sunscreen', 'Mask & Lip Care', 'Body Care'],
   },
   {
-    slug: 'cosmetics', name: 'Cosmetics', nameBn: 'কসমেটিকস', order: 3,
-    tagline: 'Everyday colour, wedding-day payoff', taglineBn: 'প্রতিদিনের রঙ, বিয়ের দিনের জেল্লা',
+    slug: 'cosmetics', name: 'Cosmetics', order: 3,
+    tagline: 'Everyday colour, wedding-day payoff',
     blurb: 'Long-wear formulas built for Dhaka humidity, in shades chosen for South Asian skin tones.',
     art: { shape: 'lipstick', hue: 350 },
     subcategories: ['Lips', 'Face', 'Eyes', 'Brushes & Tools', 'Gift Sets'],
   },
   {
-    slug: 'hair-care', name: 'Hair Care', nameBn: 'হেয়ার কেয়ার', order: 4,
-    tagline: 'For hair that lives under a scarf', taglineBn: 'হিজাবের নিচের চুলের যত্ন',
+    slug: 'hair-care', name: 'Hair Care', order: 4,
+    tagline: 'For hair that lives under a scarf',
     blurb: 'Scalp-focused oils, sulphate-free washes and lightweight serums that keep length healthy under daily wrapping.',
     art: { shape: 'bottle', hue: 150 },
     subcategories: ['Hair Oil', 'Shampoo', 'Conditioner', 'Hair Serum', 'Hair Mask', 'Accessories'],
   },
   {
-    slug: 'others', name: 'Others', nameBn: 'অন্যান্য', order: 5,
-    tagline: 'The finishing touches', taglineBn: 'শেষ ছোঁয়া',
+    slug: 'others', name: 'Others', order: 5,
+    tagline: 'The finishing touches',
     blurb: 'Attar, prayer essentials, everyday jewellery and gift-ready bundles — the small things that complete the look.',
     art: { shape: 'pouch', hue: 265 },
     subcategories: ['Attar & Perfume', 'Bags & Pouches', 'Jewellery', 'Prayer Essentials', 'Abaya & Borka', 'Gift Sets'],
@@ -45,13 +45,12 @@ const spec = (label, value) => ({ label, value })
 export const PRODUCTS = [
   /* ------------------------------- HIJABS -------------------------------- */
   {
-    name: 'Signature Georgette Hijab', nameBn: 'সিগনেচার জর্জেট হিজাব',
+    name: 'Signature Georgette Hijab',
     slug: 'signature-georgette-hijab', sku: 'HJ-GEO-001',
     category: 'hijabs', subcategory: 'Georgette Hijab',
     price: 890, compareAt: 1250, costPrice: 480, stock: 60, badge: 'Bestseller',
     rating: 4.9, reviewCount: 214, soldCount: 890, featured: true,
     short: 'Weightless georgette with a soft matte fall — the one that never slips.',
-    shortBn: 'হালকা জর্জেট, সারাদিন পরে থাকলেও সরে যায় না।',
     description: 'Our house georgette is woven a touch denser than the market standard, which is why it drapes without static and holds a pleat all day. Hand-hemmed on all four sides, pre-washed so the colour stays true, and cut at a generous 190 × 75 cm so you can style it open, wrapped or turban.',
     care: 'Hand wash cold with mild detergent. Do not bleach. Line dry in shade. Warm iron on reverse.',
     details: ['190 × 75 cm — generous rectangular cut', '100% premium georgette, pre-washed', 'Four-side hand-rolled hem', 'Matte finish, non-slip weave', 'Colour-fast up to 30 washes'],
@@ -65,13 +64,12 @@ export const PRODUCTS = [
     tags: ['bestseller', 'everyday'],
   },
   {
-    name: 'Everyday Jersey Hijab', nameBn: 'এভরিডে জার্সি হিজাব',
+    name: 'Everyday Jersey Hijab',
     slug: 'everyday-jersey-hijab', sku: 'HJ-JER-002',
     category: 'hijabs', subcategory: 'Jersey Hijab',
     price: 750, compareAt: 950, costPrice: 400, stock: 45,
     rating: 4.8, reviewCount: 168, soldCount: 640, featured: true,
     short: 'Buttery cotton-jersey that stays put without a single pin.',
-    shortBn: 'পিন ছাড়াই সেট হয়ে থাকে — নরম কটন জার্সি।',
     description: 'Four-way stretch cotton jersey with just enough weight to grip itself. Wrap it once in the morning and forget it — no pins, no re-adjusting on the bus. Our most-repurchased hijab by a wide margin.',
     care: 'Machine wash cold on gentle. Tumble dry low. Do not iron directly on fabric.',
     details: ['180 × 70 cm', '95% cotton jersey / 5% elastane', 'Four-way stretch, pin-free hold', 'Breathable — rated for 30°C+ days', 'Raw-edge finish, no fraying'],
@@ -85,7 +83,7 @@ export const PRODUCTS = [
     tags: ['everyday', 'pin-free'],
   },
   {
-    name: 'Pleated Chiffon Hijab', nameBn: 'প্লিটেড শিফন হিজাব',
+    name: 'Pleated Chiffon Hijab',
     slug: 'pleated-chiffon-hijab', sku: 'HJ-CHI-003',
     category: 'hijabs', subcategory: 'Chiffon Hijab',
     price: 1150, compareAt: 1500, costPrice: 620, stock: 30, badge: 'New',
@@ -100,13 +98,12 @@ export const PRODUCTS = [
     tags: ['occasion', 'new'],
   },
   {
-    name: 'Instant Slip-On Hijab', nameBn: 'ইনস্ট্যান্ট হিজাব',
+    name: 'Instant Slip-On Hijab',
     slug: 'instant-slip-on-hijab', sku: 'HJ-INS-004',
     category: 'hijabs', subcategory: 'Instant Hijab',
     price: 690, compareAt: 850, costPrice: 350, stock: 52,
     rating: 4.6, reviewCount: 141, soldCount: 520,
     short: 'Pre-sewn and ready in three seconds. Built-in cap, zero pins.',
-    shortBn: 'তিন সেকেন্ডে পরা যায় — ক্যাপসহ, পিন লাগে না।',
     description: 'A fully pre-stitched hijab with an integrated jersey inner cap. Pull it over your head, adjust the drape, done. Designed for school runs, hospital shifts and anyone who has ever been late because of a pin.',
     care: 'Machine wash cold in a laundry bag. Line dry.',
     details: ['One size, integrated inner cap', 'Pre-stitched drape — no styling required', 'Soft viscose jersey blend', 'Machine washable'],
@@ -172,13 +169,12 @@ export const PRODUCTS = [
 
   /* ------------------------------ SKINCARE ------------------------------- */
   {
-    name: 'Niacinamide 10% Clarity Serum', nameBn: 'নায়াসিনামাইড ১০% সিরাম',
+    name: 'Niacinamide 10% Clarity Serum',
     slug: 'niacinamide-10-clarity-serum', sku: 'SK-SER-001',
     category: 'skincare', subcategory: 'Serum',
     price: 1290, compareAt: 1650, costPrice: 620, stock: 40, badge: 'Bestseller',
     rating: 4.8, reviewCount: 302, soldCount: 1120, featured: true,
     short: 'Evens tone and shrinks the look of pores in about four weeks.',
-    shortBn: 'দাগ হালকা করে, চার সপ্তাহে দৃশ্যমান পরিবর্তন।',
     description: 'A lightweight water serum with 10% niacinamide and 1% zinc PCA. It calms post-acne marks, regulates oil through the afternoon, and layers cleanly under sunscreen without pilling. Fragrance-free and non-comedogenic.',
     care: 'Apply 3–4 drops to clean skin morning and night, before moisturiser. Always follow with SPF in the morning.',
     details: ['30 ml amber glass with dropper', '10% Niacinamide + 1% Zinc PCA', 'Fragrance-free, alcohol-free', 'pH 5.5 — safe for daily use', 'Dermatologically tested'],
@@ -201,13 +197,12 @@ export const PRODUCTS = [
     tags: ['sensitive', 'daily'],
   },
   {
-    name: 'Invisible Sunscreen SPF 50+ PA++++', nameBn: 'ইনভিজিবল সানস্ক্রিন SPF ৫০+',
+    name: 'Invisible Sunscreen SPF 50+ PA++++',
     slug: 'invisible-sunscreen-spf50', sku: 'SK-SUN-003',
     category: 'skincare', subcategory: 'Sunscreen',
     price: 1450, compareAt: 1800, costPrice: 700, stock: 38, badge: "Editor's Pick",
     rating: 4.9, reviewCount: 411, soldCount: 1560, featured: true,
     short: 'No white cast, no grease. The one you will actually reapply.',
-    shortBn: 'সাদা দাগ পড়ে না, চিটচিটে নয়।',
     description: 'A modern chemical filter blend that finishes matte and completely clear on deeper skin tones. Sits under makeup without pilling and does not sting the eyes — the two reasons people stop wearing sunscreen.',
     care: 'Apply two finger-lengths as the last step of your morning routine. Reapply every 3 hours outdoors.',
     details: ['50 ml squeeze tube', 'SPF 50+ / PA++++ broad spectrum', 'Zero white cast on all skin tones', 'Non-comedogenic, alcohol-free', 'Reef-friendlier filter system'],
@@ -296,13 +291,12 @@ export const PRODUCTS = [
 
   /* ------------------------------ COSMETICS ------------------------------ */
   {
-    name: 'Velvet Matte Lipstick', nameBn: 'ভেলভেট ম্যাট লিপস্টিক',
+    name: 'Velvet Matte Lipstick',
     slug: 'velvet-matte-lipstick', sku: 'CS-LIP-001',
     category: 'cosmetics', subcategory: 'Lips',
     price: 890, compareAt: 1100, costPrice: 380, stock: 65, badge: 'Bestseller',
     rating: 4.8, reviewCount: 356, soldCount: 1380, featured: true,
     short: 'Eight hours of colour that never turns your lips to paper.',
-    shortBn: 'আট ঘণ্টা টেকে, ঠোঁট শুকায় না।',
     description: 'A cushiony matte that sets down soft, not flat. Full opacity in one pass, survives tea and a full meal, and stays comfortable because we built it on an emollient base instead of pure alcohol.',
     care: 'Line lips first for the sharpest edge. Blot once and reapply for maximum wear.',
     details: ['3.8 g bullet, magnetic cap', '8-hour transfer-resistant wear', 'One-swipe full coverage', 'Vitamin E + jojoba base', 'Paraben-free, not tested on animals'],
@@ -334,13 +328,12 @@ export const PRODUCTS = [
     tags: ['inclusive-shades'],
   },
   {
-    name: 'Smudge-Proof Kajal', nameBn: 'স্মাজ-প্রুফ কাজল',
+    name: 'Smudge-Proof Kajal',
     slug: 'smudge-proof-kajal', sku: 'CS-EYE-003',
     category: 'cosmetics', subcategory: 'Eyes',
     price: 450, compareAt: 590, costPrice: 170, stock: 88,
     rating: 4.7, reviewCount: 289, soldCount: 1250, featured: true,
     short: 'Blackest black waterline kajal that survives a Dhaka summer.',
-    shortBn: 'ঘামেও ছড়ায় না — গাঢ় কালো কাজল।',
     description: 'A waterproof gel-crayon that sets in 20 seconds and then simply does not move — no grey shadow under the eye at 4 pm. Ophthalmologist-tested and safe for contact lens wearers.',
     care: 'Remove with an oil-based cleanser or micellar water.',
     details: ['0.35 g retractable twist-up', '12-hour waterproof, smudge-proof wear', 'Intense one-stroke pigment', 'Ophthalmologist tested, lens-safe'],
@@ -403,7 +396,7 @@ export const PRODUCTS = [
     tags: ['gift', 'tools'],
   },
   {
-    name: 'Bridal Glam Gift Set', nameBn: 'ব্রাইডাল গিফট সেট',
+    name: 'Bridal Glam Gift Set',
     slug: 'bridal-glam-gift-set', sku: 'CS-GFT-008',
     category: 'cosmetics', subcategory: 'Gift Sets',
     price: 3490, compareAt: 4600, costPrice: 1600, stock: 14, badge: 'Gift',
@@ -419,13 +412,12 @@ export const PRODUCTS = [
 
   /* ------------------------------ HAIR CARE ------------------------------ */
   {
-    name: 'Rosemary Scalp Growth Oil', nameBn: 'রোজমেরি স্ক্যাল্প অয়েল',
+    name: 'Rosemary Scalp Growth Oil',
     slug: 'rosemary-scalp-growth-oil', sku: 'HC-OIL-001',
     category: 'hair-care', subcategory: 'Hair Oil',
     price: 990, compareAt: 1300, costPrice: 420, stock: 58, badge: 'Bestseller',
     rating: 4.9, reviewCount: 398, soldCount: 1490, featured: true,
     short: 'Cold-pressed oils and rosemary for thinning edges and covered hair.',
-    shortBn: 'চুল পড়া কমায়, হিজাবের নিচের স্ক্যাল্পের জন্য।',
     description: 'Rosemary, castor, black seed and grapeseed in a non-greasy blend built for scalps that spend the day under a scarf. The nozzle applicator parts hair and delivers oil where it matters, without soaking the length.',
     care: 'Massage into the scalp 2–3 times weekly. Leave 2 hours or overnight, then shampoo.',
     details: ['100 ml with precision scalp nozzle', 'Rosemary + castor + black seed + grapeseed', 'Cold-pressed, no mineral oil', 'Non-greasy — washes out in one shampoo', 'Safe for coloured and treated hair'],
@@ -528,13 +520,12 @@ export const PRODUCTS = [
 
   /* -------------------------------- OTHERS ------------------------------- */
   {
-    name: 'Oud & Rose Attar', nameBn: 'উদ ও গোলাপ আতর',
+    name: 'Oud & Rose Attar',
     slug: 'oud-rose-attar', sku: 'OT-ATR-001',
     category: 'others', subcategory: 'Attar & Perfume',
     price: 1650, compareAt: 2100, costPrice: 700, stock: 25, badge: 'Bestseller',
     rating: 4.9, reviewCount: 176, soldCount: 520, featured: true,
     short: 'Alcohol-free oil attar with genuine six-hour depth.',
-    shortBn: 'অ্যালকোহল-মুক্ত আতর, ছয় ঘণ্টা স্থায়ী।',
     description: 'Cambodian oud softened with Taif rose in a jojoba oil base. Alcohol-free, so it warms with your skin rather than flashing off — one dab on each wrist carries through the evening.',
     care: 'Roll onto pulse points. Do not rub — it breaks the top notes.',
     details: ['12 ml roll-on glass bottle', 'Alcohol-free oil concentrate', 'Cambodian oud + Taif rose', '6–8 hour longevity', 'Prayer-appropriate'],
@@ -543,7 +534,7 @@ export const PRODUCTS = [
     tags: ['bestseller', 'gift'],
   },
   {
-    name: 'Padded Velvet Prayer Mat', nameBn: 'ভেলভেট জায়নামাজ',
+    name: 'Padded Velvet Prayer Mat',
     slug: 'velvet-prayer-mat', sku: 'OT-PRY-002',
     category: 'others', subcategory: 'Prayer Essentials',
     price: 1450, compareAt: 0, costPrice: 680, stock: 18,
@@ -598,13 +589,12 @@ export const PRODUCTS = [
     tags: ['travel'],
   },
   {
-    name: 'Everyday Nida Abaya', nameBn: 'নিদা আবায়া',
+    name: 'Everyday Nida Abaya',
     slug: 'everyday-nida-abaya', sku: 'OT-ABY-006',
     category: 'others', subcategory: 'Abaya & Borka',
     price: 2890, compareAt: 3600, costPrice: 1350, stock: 20,
     rating: 4.8, reviewCount: 96, soldCount: 260,
     short: 'Korean Nida that holds its shape and never turns see-through.',
-    shortBn: 'কোরিয়ান নিদা কাপড় — ভেতরের কিছু দেখা যায় না।',
     description: 'Heavy Korean Nida in a straight cut with side pockets and a full front zip. Opaque under Dhaka sun, wrinkle-resistant enough to travel in, and cut long in the sleeve so it stays put when you raise your arms.',
     care: 'Machine wash cold. Hang dry. Warm iron if needed.',
     details: ['Sizes 52–60 (chest 38–48 in)', 'Korean Nida fabric, fully opaque', 'Side pockets + full front zip', 'Wrinkle resistant', 'Matching hijab included'],

@@ -22,10 +22,10 @@ const DEFAULT_SETTINGS = {
     { name: 'YouTube', href: 'https://youtube.com/@goodsbysadia', icon: 'youtube', enabled: true },
   ],
   announcements: [
-    { text: 'Free delivery on orders over ৳2,000', textBn: '২০০০৳ এর উপরে ফ্রি ডেলিভারি', enabled: true },
-    { text: 'Cash on delivery available nationwide', textBn: 'সারাদেশে ক্যাশ অন ডেলিভারি', enabled: true },
-    { text: '100% authentic — or your money back', textBn: '১০০% অরিজিনাল — নয়তো টাকা ফেরত', enabled: true },
-    { text: 'Same-day dispatch inside Dhaka before 4 PM', textBn: 'ঢাকায় বিকাল ৪টার আগে অর্ডারে সেইম-ডে ডেলিভারি', enabled: true },
+    { text: 'Free delivery on orders over ৳2,000', enabled: true },
+    { text: 'Cash on delivery available nationwide', enabled: true },
+    { text: '100% authentic — or your money back', enabled: true },
+    { text: 'Same-day dispatch inside Dhaka before 4 PM', enabled: true },
   ],
   delivery: {
     freeShippingThreshold: 2000,
@@ -33,9 +33,9 @@ const DEFAULT_SETTINGS = {
     codAdvanceAmount: 200,
     returnWindowDays: 7,
     zones: [
-      { id: 'dhaka-city', label: 'Inside Dhaka City', labelBn: 'ঢাকা সিটির ভিতরে', charge: 70, eta: '1–2 working days', etaBn: '১–২ কর্মদিবস', enabled: true },
-      { id: 'dhaka-sub', label: 'Dhaka Suburb / Savar / Keraniganj', labelBn: 'ঢাকা সাবএরিয়া / সাভার / কেরানীগঞ্জ', charge: 100, eta: '2–3 working days', etaBn: '২–৩ কর্মদিবস', enabled: true },
-      { id: 'outside', label: 'Outside Dhaka (all districts)', labelBn: 'ঢাকার বাইরে (সব জেলা)', charge: 130, eta: '2–4 working days', etaBn: '২–৪ কর্মদিবস', enabled: true },
+      { id: 'dhaka-city', label: 'Inside Dhaka City', charge: 70, eta: '1–2 working days', enabled: true },
+      { id: 'dhaka-sub', label: 'Dhaka Suburb / Savar / Keraniganj', charge: 100, eta: '2–3 working days', enabled: true },
+      { id: 'outside', label: 'Outside Dhaka (all districts)', charge: 130, eta: '2–4 working days', enabled: true },
     ],
     couriers: [
       { name: 'Steadfast Courier', enabled: true },
@@ -67,16 +67,12 @@ const DEFAULT_SETTINGS = {
   promotions: {
     enabled: true,
     heading: 'Limited time offers',
-    headingBn: 'সীমিত সময়ের অফার',
     subheading: 'Ends when the timer does — no extensions.',
     offers: [
       {
         eyebrow: 'Limited — today only',
-        eyebrowBn: 'শুধু আজকের জন্য',
         title: 'Up to 30% off the hijab edit',
-        titleBn: 'হিজাব কালেকশনে ৩০% পর্যন্ত ছাড়',
         body: 'Georgette, jersey, chiffon and voile — every fabric we make, reduced until midnight.',
-        bodyBn: 'জর্জেট, জার্সি, শিফন ও ভয়েল — সব কাপড়ে ছাড়, মধ্যরাত পর্যন্ত।',
         ctaLabel: 'Shop the edit',
         ctaHref: '/shop/hijabs',
         layout: 'large',
@@ -88,11 +84,8 @@ const DEFAULT_SETTINGS = {
       },
       {
         eyebrow: 'Gifting',
-        eyebrowBn: 'উপহার',
         title: 'Ready-to-give bundles',
-        titleBn: 'উপহারের জন্য প্রস্তুত বক্স',
         body: 'Boxed, ribboned and packed with a handwritten note — send it straight to her door.',
-        bodyBn: 'বক্স, ফিতা ও হাতে লেখা কার্ডসহ — সরাসরি পৌঁছে যাবে।',
         ctaLabel: 'Browse gift sets',
         ctaHref: '/shop?filter=gift',
         badge: 'Gifting',
@@ -113,14 +106,14 @@ const DEFAULT_SETTINGS = {
     ],
   },
   faqs: [
-    { q: 'How long does delivery take?', a: 'Inside Dhaka: 1–2 working days. Outside Dhaka: 2–4 working days. Orders placed before 4:00 PM are dispatched the same day. You will receive an SMS with your courier tracking number as soon as the parcel leaves us.', qBn: 'ডেলিভারিতে কত সময় লাগে?', aBn: 'ঢাকার ভিতরে ১–২ কর্মদিবস, ঢাকার বাইরে ২–৪ কর্মদিবস। বিকাল ৪টার আগে অর্ডার করলে একই দিনে পাঠানো হয়।' },
-    { q: 'Is cash on delivery available everywhere?', a: 'Yes. Cash on delivery is available in all 64 districts of Bangladesh. You pay the courier in cash when the parcel reaches you. For orders above ৳5,000 we ask for a ৳200 advance to confirm the order, which is deducted from the total.', qBn: 'ক্যাশ অন ডেলিভারি কি সব জায়গায় আছে?', aBn: 'হ্যাঁ, ৬৪ জেলাতেই ক্যাশ অন ডেলিভারি আছে। ৫০০০৳ এর উপরে অর্ডারে ২০০৳ অ্যাডভান্স লাগে, যা মোট বিল থেকে বাদ যায়।' },
-    { q: 'Which online payment methods do you accept?', a: 'You can pay with bKash (Send Money or app checkout), Nagad, Rocket, Upay, or any Bangladeshi bank card via SSLCommerz. Every card transaction is processed on SSLCommerz’s secure servers — we never see or store your card details.', qBn: 'কোন অনলাইন পেমেন্ট নেওয়া হয়?', aBn: 'বিকাশ, নগদ, রকেট, উপায় এবং যেকোনো ব্যাংক কার্ড (SSLCommerz এর মাধ্যমে)।' },
-    { q: 'Are your cosmetics and skincare authentic?', a: 'Yes, without exception. We source directly from authorised distributors and every unit carries a verifiable batch code and expiry date. If any product you receive from us is not authentic, we will refund you in full and let you keep the item.', qBn: 'পণ্য কি অরিজিনাল?', aBn: 'হ্যাঁ, ১০০% অরিজিনাল। প্রতিটি পণ্যে ব্যাচ কোড ও এক্সপায়ারি ডেট আছে।' },
-    { q: 'Can I return or exchange an item?', a: 'You may return any unopened, unused item with its seal intact within 7 days of delivery. Hijabs may be exchanged for a different colour or size within 7 days provided the tags are attached. For hygiene reasons, opened cosmetics and skincare cannot be returned unless the product is faulty or you received the wrong item.', qBn: 'পণ্য ফেরত বা পরিবর্তন করা যাবে?', aBn: '৭ দিনের মধ্যে সিল না খোলা পণ্য ফেরত দেওয়া যাবে। হিজাব ট্যাগসহ থাকলে রঙ বা সাইজ বদলানো যাবে।' },
-    { q: 'What if my product arrives damaged or wrong?', a: 'Record a video while opening the parcel and message us on WhatsApp within 48 hours. We will arrange a free replacement and cover the return courier charge. The unboxing video is the only thing we ask for.', qBn: 'ভুল বা নষ্ট পণ্য পেলে কী করব?', aBn: 'পার্সেল খোলার সময় ভিডিও করুন এবং ৪৮ ঘণ্টার মধ্যে হোয়াটসঅ্যাপে জানান। আমরা ফ্রি রিপ্লেসমেন্ট দেব।' },
-    { q: 'How do I know which hijab fabric to choose?', a: 'Jersey for everyday, pin-free wear. Georgette for a structured drape that holds a style. Chiffon for occasions and photographs. Cotton voile for the hottest months. Message us on WhatsApp with your usual routine and we will recommend the right one.', qBn: 'কোন হিজাব কাপড় নেব?', aBn: 'প্রতিদিনের জন্য জার্সি, স্টাইলিং এর জন্য জর্জেট, অনুষ্ঠানের জন্য শিফন, গরমে কটন ভয়েল।' },
-    { q: 'Do you deliver outside Bangladesh?', a: 'Not yet. We currently ship within Bangladesh only. International shipping is planned for 2027 — join the newsletter and we will tell you when it opens.', qBn: 'দেশের বাইরে ডেলিভারি হয়?', aBn: 'এখনো নয়। ২০২৭ সালে আন্তর্জাতিক ডেলিভারি চালুর পরিকল্পনা আছে।' },
+    { q: 'How long does delivery take?', a: 'Inside Dhaka: 1–2 working days. Outside Dhaka: 2–4 working days. Orders placed before 4:00 PM are dispatched the same day. You will receive an SMS with your courier tracking number as soon as the parcel leaves us.' },
+    { q: 'Is cash on delivery available everywhere?', a: 'Yes. Cash on delivery is available in all 64 districts of Bangladesh. You pay the courier in cash when the parcel reaches you. For orders above ৳5,000 we ask for a ৳200 advance to confirm the order, which is deducted from the total.' },
+    { q: 'Which online payment methods do you accept?', a: 'You can pay with bKash (Send Money or app checkout), Nagad, Rocket, Upay, or any Bangladeshi bank card via SSLCommerz. Every card transaction is processed on SSLCommerz’s secure servers — we never see or store your card details.' },
+    { q: 'Are your cosmetics and skincare authentic?', a: 'Yes, without exception. We source directly from authorised distributors and every unit carries a verifiable batch code and expiry date. If any product you receive from us is not authentic, we will refund you in full and let you keep the item.' },
+    { q: 'Can I return or exchange an item?', a: 'You may return any unopened, unused item with its seal intact within 7 days of delivery. Hijabs may be exchanged for a different colour or size within 7 days provided the tags are attached. For hygiene reasons, opened cosmetics and skincare cannot be returned unless the product is faulty or you received the wrong item.' },
+    { q: 'What if my product arrives damaged or wrong?', a: 'Record a video while opening the parcel and message us on WhatsApp within 48 hours. We will arrange a free replacement and cover the return courier charge. The unboxing video is the only thing we ask for.' },
+    { q: 'How do I know which hijab fabric to choose?', a: 'Jersey for everyday, pin-free wear. Georgette for a structured drape that holds a style. Chiffon for occasions and photographs. Cotton voile for the hottest months. Message us on WhatsApp with your usual routine and we will recommend the right one.' },
+    { q: 'Do you deliver outside Bangladesh?', a: 'Not yet. We currently ship within Bangladesh only. International shipping is planned for 2027 — join the newsletter and we will tell you when it opens.' },
   ],
   policies: [
     {

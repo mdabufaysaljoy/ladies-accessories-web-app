@@ -61,7 +61,7 @@ router.get(
     }
     if (q) {
       const rx = new RegExp(String(q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
-      filter.$or = [{ name: rx }, { nameBn: rx }, { short: rx }, { subcategory: rx }, { tags: rx }]
+      filter.$or = [{ name: rx }, { short: rx }, { subcategory: rx }, { tags: rx }]
     }
 
     const sorts = {

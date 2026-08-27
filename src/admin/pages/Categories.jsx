@@ -11,7 +11,7 @@ import { ART_SHAPE_OPTIONS } from '@/components/product/ProductArt'
 import { slugifyClient } from '@/utils/format'
 
 const BLANK = {
-  name: '', nameBn: '', slug: '', tagline: '', taglineBn: '', blurb: '',
+  name: '', slug: '', tagline: '', blurb: '',
   imageUrl: '',
   subcategories: [], art: { shape: 'jar', hue: 320 }, order: 0, active: true, featured: true,
   showInNav: true,
@@ -221,9 +221,6 @@ function CategoryEditor({ category, onClose, onSaved, onError }) {
               placeholder="Hijabs"
             />
           </Field>
-          <Field label="Name (Bangla)">
-            <Input value={form.nameBn} onChange={(e) => setForm((f) => ({ ...f, nameBn: e.target.value }))} placeholder="হিজাব" />
-          </Field>
         </div>
 
         <Field label="URL slug" hint="/shop/…">
@@ -233,9 +230,6 @@ function CategoryEditor({ category, onClose, onSaved, onError }) {
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Tagline">
             <Input value={form.tagline} onChange={(e) => setForm((f) => ({ ...f, tagline: e.target.value }))} placeholder="Drape that holds all day" />
-          </Field>
-          <Field label="Tagline (Bangla)">
-            <Input value={form.taglineBn} onChange={(e) => setForm((f) => ({ ...f, taglineBn: e.target.value }))} />
           </Field>
         </div>
 

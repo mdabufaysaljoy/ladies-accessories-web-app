@@ -188,33 +188,30 @@ router.get(
     res.json({
       methods: [
         p.cod.enabled && {
-          id: 'cod', name: 'Cash on Delivery', nameBn: 'ক্যাশ অন ডেলিভারি',
+          id: 'cod', name: 'Cash on Delivery',
           tagline: 'Pay the courier when your parcel arrives',
-          taglineBn: 'পার্সেল হাতে পেয়ে কুরিয়ারকে টাকা দিন',
           detail: p.cod.instructions, badge: 'Most popular',
         },
         p.bkashManual.enabled && {
-          id: 'bkash-manual', name: 'bKash — Send Money', nameBn: 'বিকাশ — সেন্ড মানি',
+          id: 'bkash-manual', name: 'bKash — Send Money',
           tagline: `Send to ${p.bkashManual.number}, then enter your TrxID`,
-          taglineBn: `${p.bkashManual.number} নম্বরে সেন্ড মানি করে TrxID দিন`,
           detail: p.bkashManual.instructions,
           number: p.bkashManual.number, accountType: p.bkashManual.accountType,
           requiresTransactionId: true, badge: 'Instant',
         },
         p.nagadManual.enabled && {
-          id: 'nagad-manual', name: 'Nagad — Send Money', nameBn: 'নগদ — সেন্ড মানি',
+          id: 'nagad-manual', name: 'Nagad — Send Money',
           tagline: `Send to ${p.nagadManual.number}, then enter your TrxID`,
           detail: p.nagadManual.instructions,
           number: p.nagadManual.number, requiresTransactionId: true,
         },
         p.bkash.enabled && {
-          id: 'bkash', name: 'bKash Checkout', nameBn: 'বিকাশ চেকআউট',
+          id: 'bkash', name: 'bKash Checkout',
           tagline: 'Pay securely inside the bKash app', badge: 'Secure',
         },
         p.sslcommerz.enabled && {
-          id: 'sslcommerz', name: 'Pay Online — SSLCommerz', nameBn: 'অনলাইন পেমেন্ট',
+          id: 'sslcommerz', name: 'Pay Online — SSLCommerz',
           tagline: 'bKash · Nagad · Rocket · Upay · Visa · Mastercard · Net banking',
-          taglineBn: 'বিকাশ · নগদ · রকেট · উপায় · কার্ড · নেট ব্যাংকিং',
           badge: 'Secure',
         },
       ].filter(Boolean),

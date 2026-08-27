@@ -11,9 +11,9 @@ import { useSettings } from '@/context/SettingsContext'
 import { cx } from '@/utils/format'
 
 const BLANK = {
-  eyebrow: '', eyebrowBn: '',
-  title: '', titleBn: '',
-  body: '', bodyBn: '',
+  eyebrow: '',
+  title: '',
+  body: '',
   ctaLabel: 'Shop now', ctaHref: '/shop',
   badge: '',
   layout: 'compact',
@@ -54,7 +54,6 @@ export default function Offers() {
       setPromos({
         enabled: settings.promotions?.enabled ?? true,
         heading: settings.promotions?.heading ?? '',
-        headingBn: settings.promotions?.headingBn ?? '',
         subheading: settings.promotions?.subheading ?? '',
         offers: settings.promotions?.offers ?? [],
       })
@@ -152,14 +151,6 @@ export default function Offers() {
               onChange={(e) => setPromos((p) => ({ ...p, heading: e.target.value }))}
               onBlur={() => persist(promos)}
               placeholder="Limited time offers"
-            />
-          </Field>
-          <Field label="Heading (Bangla)">
-            <Input
-              value={promos.headingBn}
-              onChange={(e) => setPromos((p) => ({ ...p, headingBn: e.target.value }))}
-              onBlur={() => persist(promos)}
-              placeholder="সীমিত সময়ের অফার"
             />
           </Field>
           <Field label="Sub-heading" className="sm:col-span-2">
@@ -354,22 +345,13 @@ function OfferEditor({ offer, onClose, onSave, isNew }) {
           <Field label="Eyebrow" hint="Small label above the title">
             <Input value={form.eyebrow} onChange={set('eyebrow')} placeholder="Limited — today only" />
           </Field>
-          <Field label="Eyebrow (Bangla)">
-            <Input value={form.eyebrowBn} onChange={set('eyebrowBn')} placeholder="শুধু আজকের জন্য" />
-          </Field>
 
           <Field label="Title" required className="sm:col-span-2">
             <Input value={form.title} onChange={set('title')} placeholder="Up to 30% off the hijab edit" />
           </Field>
-          <Field label="Title (Bangla)" className="sm:col-span-2">
-            <Input value={form.titleBn} onChange={set('titleBn')} placeholder="হিজাব কালেকশনে ৩০% ছাড়" />
-          </Field>
 
           <Field label="Description" className="sm:col-span-2">
             <Textarea rows={2} value={form.body} onChange={set('body')} />
-          </Field>
-          <Field label="Description (Bangla)" className="sm:col-span-2">
-            <Textarea rows={2} value={form.bodyBn} onChange={set('bodyBn')} />
           </Field>
 
           <Field label="Button label">

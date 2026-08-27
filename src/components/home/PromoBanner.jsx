@@ -82,7 +82,7 @@ function OfferArt({ offer, className = '' }) {
   return <ProductArt product={{ art: offer.art, name: offer.title }} className={className} />
 }
 
-function LargeOffer({ offer, tf }) {
+function LargeOffer({ offer }) {
   const theme = THEME[offer.theme] ?? THEME.plum
 
   return (
@@ -90,11 +90,11 @@ function LargeOffer({ offer, tf }) {
       <div className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-rose/25 blur-3xl" />
       <div className="relative grid items-center gap-8 p-8 sm:grid-cols-[1.1fr_1fr] md:p-12">
         <div>
-          {offer.eyebrow && <p className={cx('eyebrow', theme.eyebrow)}>{tf(offer, 'eyebrow')}</p>}
-          <h3 className="mt-3.5 text-[2.125rem] leading-[1.05] md:text-[2.75rem]">{tf(offer, 'title')}</h3>
+          {offer.eyebrow && <p className={cx('eyebrow', theme.eyebrow)}>{offer.eyebrow}</p>}
+          <h3 className="mt-3.5 text-[2.125rem] leading-[1.05] md:text-[2.75rem]">{offer.title}</h3>
           {offer.body && (
             <p className={cx('mt-4 max-w-sm text-[0.9375rem] leading-relaxed text-balance-pretty', theme.body)}>
-              {tf(offer, 'body')}
+              {offer.body}
             </p>
           )}
 
@@ -102,7 +102,7 @@ function LargeOffer({ offer, tf }) {
 
           {offer.ctaLabel && (
             <Button to={offer.ctaHref || '/shop'} variant={theme.cta} size="lg" className="mt-7">
-              {tf(offer, 'ctaLabel')} <Icon name="arrowRight" size={17} />
+              {offer.ctaLabel} <Icon name="arrowRight" size={17} />
             </Button>
           )}
         </div>
@@ -115,7 +115,7 @@ function LargeOffer({ offer, tf }) {
   )
 }
 
-function CompactOffer({ offer, tf }) {
+function CompactOffer({ offer }) {
   return (
     <div className="reveal group relative min-h-[19rem] overflow-hidden rounded-[1.75rem] bg-sand">
       <div className="absolute inset-0 opacity-90 transition-transform duration-[1100ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-105">
@@ -129,16 +129,16 @@ function CompactOffer({ offer, tf }) {
             <Icon name="gift" size={13} /> {offer.badge}
           </span>
         )}
-        <h3 className="mt-4 text-[1.75rem] leading-tight">{tf(offer, 'title')}</h3>
+        <h3 className="mt-4 text-[1.75rem] leading-tight">{offer.title}</h3>
         {offer.body && (
           <p className="mt-2 max-w-xs text-[0.875rem] text-cream/70 text-balance-pretty">
-            {tf(offer, 'body')}
+            {offer.body}
           </p>
         )}
         <Countdown offer={offer} theme={THEME.ink} />
         {offer.ctaLabel && (
           <Button to={offer.ctaHref || '/shop'} variant="light" size="md" className="mt-5 w-fit">
-            {tf(offer, 'ctaLabel')}
+            {offer.ctaLabel}
           </Button>
         )}
       </div>
@@ -148,7 +148,7 @@ function CompactOffer({ offer, tf }) {
 
 export function PromoBanner() {
   const ref = useReveal({ stagger: 100 })
-  const { settings, tf } = useSettings()
+  const { settings } = useSettings()
   const promos = settings.promotions
 
   if (!promos?.enabled) return null
@@ -170,7 +170,7 @@ export function PromoBanner() {
       {promos.heading && (
         <div className="reveal mb-6">
           <h2 className="text-[1.75rem] leading-tight tracking-tight md:text-[2rem]">
-            {tf(promos, 'heading')}
+            {promos.heading}
           </h2>
           {promos.subheading && (
             <p className="mt-1.5 text-[0.9375rem] text-ink/55">{promos.subheading}</p>
@@ -180,13 +180,13 @@ export function PromoBanner() {
 
       <div className={cx('grid gap-4', large.length && compact.length && 'lg:grid-cols-[1.35fr_1fr]')}>
         {large.map((offer, i) => (
-          <LargeOffer key={`large-${i}`} offer={offer} tf={tf} />
+          <LargeOffer key={`large-${i}`} offer={offer} />
         ))}
 
         {compact.length > 0 && (
           <div className={cx('grid gap-4', !large.length && compact.length > 1 && 'md:grid-cols-2 lg:grid-cols-3')}>
             {compact.map((offer, i) => (
-              <CompactOffer key={`compact-${i}`} offer={offer} tf={tf} />
+              <CompactOffer key={`compact-${i}`} offer={offer} />
             ))}
           </div>
         )}

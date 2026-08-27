@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import { Logo } from './Logo'
-import { LanguageToggle } from '@/components/common/LanguageToggle'
 import { AnnouncementBar } from './AnnouncementBar'
 import { MobileMenu } from './MobileMenu'
 import { Icon } from '@/components/ui/Icon'
@@ -202,7 +201,6 @@ export function Header() {
               </nav>
 
               <div className="flex items-center gap-0.5">
-                <LanguageToggle className="mr-1.5 hidden sm:flex" />
 
                 <Link
                   to={isSignedIn ? '/account' : '/login'}

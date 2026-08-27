@@ -4,10 +4,8 @@ import { slugify } from '../utils/helpers.js'
 const categorySchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
-    nameBn: { type: String, default: '' },
     slug: { type: String, required: true, unique: true, index: true },
     tagline: { type: String, default: '' },
-    taglineBn: { type: String, default: '' },
     blurb: { type: String, default: '' },
     imageUrl: { type: String, default: '' },
     art: { shape: { type: String, default: 'jar' }, hue: { type: Number, default: 320 } },

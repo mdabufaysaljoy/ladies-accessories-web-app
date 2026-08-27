@@ -214,14 +214,8 @@ export default function SettingsPage() {
               <Field label="Business name" required>
                 <Input value={data.brand.name} onChange={(e) => set('brand', { name: e.target.value })} />
               </Field>
-              <Field label="Business name (Bangla)">
-                <Input value={data.brand.nameBn} onChange={(e) => set('brand', { nameBn: e.target.value })} />
-              </Field>
               <Field label="Tagline" hint="Shown under the logo and in the browser tab">
                 <Input value={data.brand.tagline} onChange={(e) => set('brand', { tagline: e.target.value })} />
-              </Field>
-              <Field label="Tagline (Bangla)">
-                <Input value={data.brand.taglineBn} onChange={(e) => set('brand', { taglineBn: e.target.value })} />
               </Field>
               <div className="grid gap-4 sm:grid-cols-3">
                 <Field label="Logo letter" hint="Fallback mark">
@@ -327,9 +321,6 @@ export default function SettingsPage() {
               <Field label="Shop address">
                 <Textarea rows={2} value={data.contact.address} onChange={(e) => set('contact', { address: e.target.value })} />
               </Field>
-              <Field label="Shop address (Bangla)">
-                <Textarea rows={2} value={data.contact.addressBn} onChange={(e) => set('contact', { addressBn: e.target.value })} />
-              </Field>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Opening hours">
                   <Input value={data.contact.hours} onChange={(e) => set('contact', { hours: e.target.value })} />
@@ -372,12 +363,11 @@ export default function SettingsPage() {
               <Repeater
                 items={data.announcements ?? []}
                 onChange={(v) => setRoot('announcements', v)}
-                blank={{ text: '', textBn: '', enabled: true }}
+                blank={{ text: '', enabled: true }}
                 addLabel="Add announcement"
                 render={(item, patch) => (
                   <div className="space-y-2">
                     <Input value={item.text ?? ''} onChange={(e) => patch({ text: e.target.value })} placeholder="Free delivery on orders over ৳2,000" />
-                    <Input value={item.textBn ?? ''} onChange={(e) => patch({ textBn: e.target.value })} placeholder="২০০০৳ এর উপরে ফ্রি ডেলিভারি" />
                     <Toggle checked={item.enabled !== false} onChange={(v) => patch({ enabled: v })} label="Visible" />
                   </div>
                 )}
@@ -394,9 +384,6 @@ export default function SettingsPage() {
             <div className="space-y-4">
               <Field label="Headline">
                 <Input value={data.storefront.heroHeadline} onChange={(e) => set('storefront', { heroHeadline: e.target.value })} />
-              </Field>
-              <Field label="Headline (Bangla)">
-                <Input value={data.storefront.heroHeadlineBn} onChange={(e) => set('storefront', { heroHeadlineBn: e.target.value })} />
               </Field>
               <Field label="Sub-text">
                 <Textarea rows={3} value={data.storefront.heroSubtext} onChange={(e) => set('storefront', { heroSubtext: e.target.value })} />
@@ -471,18 +458,6 @@ export default function SettingsPage() {
           <div className="space-y-4">
             <Card title="Behaviour">
               <div className="space-y-4">
-                <Field label="Default language">
-                  <Select value={data.storefront.language} onChange={(e) => set('storefront', { language: e.target.value })}>
-                    <option value="en">English</option>
-                    <option value="bn">বাংলা (Bangla)</option>
-                  </Select>
-                </Field>
-                <Toggle
-                  checked={data.storefront.allowLanguageToggle}
-                  onChange={(v) => set('storefront', { allowLanguageToggle: v })}
-                  label="Show the EN / বাংলা switch"
-                  description="Customers can pick their language in the header"
-                />
                 <Toggle
                   checked={data.storefront.showQuickOrder}
                   onChange={(v) => set('storefront', { showQuickOrder: v })}
@@ -833,7 +808,7 @@ export default function SettingsPage() {
             <Repeater
               items={data.delivery.zones ?? []}
               onChange={(v) => set('delivery', { zones: v })}
-              blank={{ id: '', label: '', labelBn: '', charge: 100, eta: '', etaBn: '', enabled: true }}
+              blank={{ id: '', label: '', charge: 100, eta: '', enabled: true }}
               addLabel="Add zone"
               render={(item, patch) => (
                 <div className="space-y-2">
@@ -842,7 +817,6 @@ export default function SettingsPage() {
                     <Input type="number" value={item.charge ?? 0} onChange={(e) => patch({ charge: Number(e.target.value) })} className="w-24" placeholder="৳" />
                   </div>
                   <div className="flex gap-2">
-                    <Input value={item.labelBn ?? ''} onChange={(e) => patch({ labelBn: e.target.value })} placeholder="ঢাকা সিটির ভিতরে" />
                     <Input value={item.eta ?? ''} onChange={(e) => patch({ eta: e.target.value })} placeholder="1–2 working days" />
                   </div>
 
@@ -1640,14 +1614,12 @@ export default function SettingsPage() {
             <Repeater
               items={data.faqs ?? []}
               onChange={(v) => setRoot('faqs', v)}
-              blank={{ q: '', a: '', qBn: '', aBn: '' }}
+              blank={{ q: '', a: '' }}
               addLabel="Add question"
               render={(item, patch) => (
                 <div className="space-y-2">
                   <Input value={item.q ?? ''} onChange={(e) => patch({ q: e.target.value })} placeholder="How long does delivery take?" />
                   <Textarea rows={3} value={item.a ?? ''} onChange={(e) => patch({ a: e.target.value })} placeholder="Inside Dhaka: 1–2 working days…" />
-                  <Input value={item.qBn ?? ''} onChange={(e) => patch({ qBn: e.target.value })} placeholder="ডেলিভারিতে কত সময় লাগে?" />
-                  <Textarea rows={2} value={item.aBn ?? ''} onChange={(e) => patch({ aBn: e.target.value })} placeholder="ঢাকার ভিতরে ১–২ কর্মদিবস…" />
                 </div>
               )}
             />

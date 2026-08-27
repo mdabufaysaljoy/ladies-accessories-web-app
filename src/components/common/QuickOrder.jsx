@@ -21,7 +21,7 @@ import { cx, isValidBdPhone, qualifiesForFreeShipping, sanitisePhoneInput, taka 
  */
 export function QuickOrder({ product, open, onClose, color, size, initialQty = 1 }) {
   const navigate = useNavigate()
-  const { zones, delivery, isBn } = useSettings()
+  const { zones, delivery } = useSettings()
   const { toast, placeOrder } = useStore()
 
   const [qty, setQty] = useState(initialQty)
@@ -43,14 +43,12 @@ export function QuickOrder({ product, open, onClose, color, size, initialQty = 1
   const shipping = freeShipping ? 0 : (zone?.charge ?? 0)
   const total = subtotal + shipping
 
-  const t = (en, bn) => (isBn ? bn : en)
-
   const submit = async (e) => {
     e.preventDefault()
     const next = {}
-    if (form.name.trim().length < 3) next.name = t('Please enter your full name', 'আপনার পুরো নাম লিখুন')
-    if (!isValidBdPhone(form.phone)) next.phone = t('Enter a valid mobile number (01XXXXXXXXX)', 'সঠিক মোবাইল নম্বর দিন (01XXXXXXXXX)')
-    if (form.address.trim().length < 10) next.address = t('Please give a full address', 'সম্পূর্ণ ঠিকানা লিখুন')
+    if (form.name.trim().length < 3) next.name = 'Please enter your full name'
+    if (!isValidBdPhone(form.phone)) next.phone = 'Enter a valid mobile number (01XXXXXXXXX)'
+    if (form.address.trim().length < 10) next.address = 'Please give a full address'
     setErrors(next)
     if (Object.keys(next).length) return
 
@@ -74,7 +72,7 @@ export function QuickOrder({ product, open, onClose, color, size, initialQty = 1
       })
       placeOrder(order)
       onClose()
-      toast(t('Order placed! We will call you shortly.', 'অর্ডার হয়েছে! আমরা শীঘ্রই কল করব।'), { kind: 'success' })
+      toast('Order placed! We will call you shortly.', { kind: 'success' })
       navigate(`/order/${order.orderNumber}`)
     } catch (error) {
       toast(error.message, { kind: 'error' })
@@ -96,14 +94,14 @@ export function QuickOrder({ product, open, onClose, color, size, initialQty = 1
       <div
         role="dialog"
         aria-modal="true"
-        aria-label={t('Quick order', 'দ্রুত অর্ডার')}
+        aria-label={'Quick order'}
         className="relative max-h-[92dvh] w-full overflow-y-auto rounded-t-[1.75rem] bg-cream animate-[fade-up_0.35s_cubic-bezier(0.16,1,0.3,1)_both] sm:max-w-lg sm:rounded-[1.75rem]"
       >
         <header className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-ink/8 bg-cream/95 px-5 py-4 backdrop-blur-md">
           <div>
-            <h2 className="font-display text-xl leading-tight">{t('Quick order', 'দ্রুত অর্ডার করুন')}</h2>
+            <h2 className="font-display text-xl leading-tight">{'Quick order'}</h2>
             <p className="text-[0.75rem] text-ink/55">
-              {t('Cash on delivery — no advance needed', 'ক্যাশ অন ডেলিভারি — অগ্রিম লাগবে না')}
+              {'Cash on delivery — no advance needed'}
             </p>
           </div>
           <button
@@ -135,12 +133,12 @@ export function QuickOrder({ product, open, onClose, color, size, initialQty = 1
           <form onSubmit={submit} className="mt-5 space-y-3.5">
             <label className="block">
               <span className="text-[0.8125rem] font-medium text-ink/70">
-                {t('Your name', 'আপনার নাম')} <span className="text-rose">*</span>
+                {'Your name'} <span className="text-rose">*</span>
               </span>
               <input
                 value={form.name}
                 onChange={(e) => { setForm((f) => ({ ...f, name: e.target.value })); setErrors((x) => ({ ...x, name: undefined })) }}
-                placeholder={t('e.g. Nusrat Jahan', 'যেমন নুসরাত জাহান')}
+                placeholder={'e.g. Nusrat Jahan'}
                 autoComplete="name"
                 className={cx('mt-1.5', inputClass(errors.name))}
               />
@@ -149,7 +147,7 @@ export function QuickOrder({ product, open, onClose, color, size, initialQty = 1
 
             <label className="block">
               <span className="text-[0.8125rem] font-medium text-ink/70">
-                {t('Mobile number', 'মোবাইল নম্বর')} <span className="text-rose">*</span>
+                {'Mobile number'} <span className="text-rose">*</span>
               </span>
               <input
                 value={form.phone}
@@ -164,20 +162,20 @@ export function QuickOrder({ product, open, onClose, color, size, initialQty = 1
 
             <label className="block">
               <span className="text-[0.8125rem] font-medium text-ink/70">
-                {t('Full address', 'সম্পূর্ণ ঠিকানা')} <span className="text-rose">*</span>
+                {'Full address'} <span className="text-rose">*</span>
               </span>
               <textarea
                 value={form.address}
                 onChange={(e) => { setForm((f) => ({ ...f, address: e.target.value })); setErrors((x) => ({ ...x, address: undefined })) }}
                 rows={2}
-                placeholder={t('House, road, area', 'বাসা, রোড, এলাকা')}
+                placeholder={'House, road, area'}
                 className={cx('mt-1.5 h-auto resize-none py-3', inputClass(errors.address))}
               />
               {errors.address && <span className="mt-1 block text-[0.75rem] text-red-600">{errors.address}</span>}
             </label>
 
             <label className="block">
-              <span className="text-[0.8125rem] font-medium text-ink/70">{t('Delivery area', 'ডেলিভারি এলাকা')}</span>
+              <span className="text-[0.8125rem] font-medium text-ink/70">{'Delivery area'}</span>
               <select
                 value={zoneId}
                 onChange={(e) => setZoneId(e.target.value)}
@@ -185,7 +183,7 @@ export function QuickOrder({ product, open, onClose, color, size, initialQty = 1
               >
                 {zones.map((z) => (
                   <option key={z.id} value={z.id}>
-                    {isBn && z.labelBn ? z.labelBn : z.label} — {taka(z.charge)}
+                    {z.label} — {taka(z.charge)}
                   </option>
                 ))}
               </select>
@@ -194,30 +192,27 @@ export function QuickOrder({ product, open, onClose, color, size, initialQty = 1
             {/* totals */}
             <dl className="space-y-1.5 rounded-2xl bg-sand px-4 py-3.5 text-[0.875rem]">
               <div className="flex justify-between">
-                <dt className="text-ink/60">{t('Subtotal', 'সাবটোটাল')}</dt>
+                <dt className="text-ink/60">{'Subtotal'}</dt>
                 <dd>{taka(subtotal)}</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-ink/60">{t('Delivery', 'ডেলিভারি চার্জ')}</dt>
-                <dd>{shipping === 0 ? <span className="text-moss">{t('Free', 'ফ্রি')}</span> : taka(shipping)}</dd>
+                <dt className="text-ink/60">{'Delivery'}</dt>
+                <dd>{shipping === 0 ? <span className="text-moss">{'Free'}</span> : taka(shipping)}</dd>
               </div>
               <div className="flex items-baseline justify-between border-t border-ink/12 pt-2">
-                <dt className="font-display text-lg">{t('Total', 'সর্বমোট')}</dt>
+                <dt className="font-display text-lg">{'Total'}</dt>
                 <dd className="font-display text-xl">{taka(total)}</dd>
               </div>
             </dl>
 
             <Button type="submit" size="lg" full loading={busy} disabled={busy}>
               <Icon name="cash" size={18} />
-              {t('Confirm order', 'অর্ডার কনফার্ম করুন')} · {taka(total)}
+              {'Confirm order'} · {taka(total)}
             </Button>
 
             <p className="flex items-center justify-center gap-1.5 text-center text-[0.6875rem] leading-relaxed text-ink/50">
               <Icon name="phone" size={12} />
-              {t(
-                'We will call to confirm before dispatch. Pay the courier on delivery.',
-                'পাঠানোর আগে আমরা কল করে কনফার্ম করব। পণ্য হাতে পেয়ে টাকা দিন।',
-              )}
+              We will call to confirm before dispatch. Pay the courier on delivery.
             </p>
           </form>
         </div>

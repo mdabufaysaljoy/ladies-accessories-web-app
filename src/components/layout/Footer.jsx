@@ -105,7 +105,7 @@ function Newsletter() {
 }
 
 export function Footer() {
-  const { brand, contact, socials, tf } = useSettings()
+  const { brand, contact, socials } = useSettings()
   const categories = useCategories()
 
   return (
@@ -126,7 +126,7 @@ export function Footer() {
             <ul className="mt-6 space-y-2.5 text-[0.875rem] text-ink/65">
               <li className="flex items-start gap-2.5">
                 <Icon name="pin" size={16} className="mt-0.5 shrink-0 text-ink/35" />
-                {tf(contact, 'address')}
+                {contact.address}
               </li>
               <li>
                 <a
@@ -177,7 +177,7 @@ export function Footer() {
                     to={`/shop/${c.slug}`}
                     className="text-[0.875rem] text-ink/65 transition-colors hover:text-plum"
                   >
-                    {tf(c, 'name')}
+                    {c.name}
                   </Link>
                 </li>
               ))}

@@ -104,7 +104,6 @@ export const COUPONS = [
 export const DIVISIONS = [
   {
     name: 'Dhaka',
-    nameBn: 'ঢাকা',
     districts: [
       'Dhaka', 'Faridpur', 'Gazipur', 'Gopalganj', 'Kishoreganj', 'Madaripur',
       'Manikganj', 'Munshiganj', 'Narayanganj', 'Narsingdi', 'Rajbari',
@@ -113,7 +112,6 @@ export const DIVISIONS = [
   },
   {
     name: 'Chattogram',
-    nameBn: 'চট্টগ্রাম',
     districts: [
       'Bandarban', 'Brahmanbaria', 'Chandpur', 'Chattogram', 'Cumilla',
       'Cox’s Bazar', 'Feni', 'Khagrachhari', 'Lakshmipur', 'Noakhali',
@@ -122,7 +120,6 @@ export const DIVISIONS = [
   },
   {
     name: 'Rajshahi',
-    nameBn: 'রাজশাহী',
     districts: [
       'Bogura', 'Chapainawabganj', 'Joypurhat', 'Naogaon', 'Natore',
       'Pabna', 'Rajshahi', 'Sirajganj',
@@ -130,7 +127,6 @@ export const DIVISIONS = [
   },
   {
     name: 'Khulna',
-    nameBn: 'খুলনা',
     districts: [
       'Bagerhat', 'Chuadanga', 'Jashore', 'Jhenaidah', 'Khulna', 'Kushtia',
       'Magura', 'Meherpur', 'Narail', 'Satkhira',
@@ -138,19 +134,16 @@ export const DIVISIONS = [
   },
   {
     name: 'Barishal',
-    nameBn: 'বরিশাল',
     districts: [
       'Barguna', 'Barishal', 'Bhola', 'Jhalokati', 'Patuakhali', 'Pirojpur',
     ],
   },
   {
     name: 'Sylhet',
-    nameBn: 'সিলেট',
     districts: ['Habiganj', 'Moulvibazar', 'Sunamganj', 'Sylhet'],
   },
   {
     name: 'Rangpur',
-    nameBn: 'রংপুর',
     districts: [
       'Dinajpur', 'Gaibandha', 'Kurigram', 'Lalmonirhat', 'Nilphamari',
       'Panchagarh', 'Rangpur', 'Thakurgaon',
@@ -158,7 +151,6 @@ export const DIVISIONS = [
   },
   {
     name: 'Mymensingh',
-    nameBn: 'ময়মনসিংহ',
     districts: ['Jamalpur', 'Mymensingh', 'Netrokona', 'Sherpur'],
   },
 ]
