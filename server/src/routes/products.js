@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { Product } from '../models/Product.js'
+import { Review } from '../models/Review.js'
 import { requireAuth, requireAbility } from '../middleware/auth.js'
 import { ApiError, asyncHandler, paginate, meta, slugify, parseYouTubeId } from '../utils/helpers.js'
 import { logActivity } from '../models/ActivityLog.js'
@@ -506,6 +507,74 @@ router.post(
     })
 
     res.json({ ok: true, modified: result.modifiedCount })
+  }),
+)
+
+/**
+ * Permanently delete many products at once.
+ *
+ * Deliberately not folded into `/bulk`, which is a dispatch table of
+ * `updateMany` operations: a destructive action does not belong in a lookup
+ * where a typo in `action` could reach it, and this one is owner-only.
+ *
+ * Accepts either an explicit list of ids, or `all: true` with the same filter
+ * the admin is looking at — so "select everything matching this search" does
+ * not have to ship thousands of ids to the server.
+ *
+ * Orders are untouched by design: each order line stores its own copy of the
+ * name, price, SKU and image, so past orders and invoices still render in full
+ * after the product is gone. Reviews are deleted with the product, because a
+ * review whose product no longer exists cannot be read and would keep counting
+ * towards the shop's ratings.
+ */
+router.post(
+  '/bulk-delete',
+  requireAuth,
+  requireAbility('products'),
+  asyncHandler(async (req, res) => {
+    if (req.user.role !== 'owner') {
+      throw ApiError.forbidden('Only the owner can permanently delete products')
+    }
+
+    const { ids, all, category, status, q } = req.body ?? {}
+
+    let filter
+    if (all) {
+      filter = {}
+      if (category) filter.category = category
+      if (status) filter.status = status
+      if (q) {
+        const rx = new RegExp(String(q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
+        filter.$or = [{ name: rx }, { sku: rx }, { subcategory: rx }, { tags: rx }]
+      }
+    } else {
+      if (!Array.isArray(ids) || !ids.length) throw ApiError.badRequest('Select at least one product')
+      filter = { _id: { $in: ids } }
+    }
+
+    // Read them first: the response names what went, and the ids are needed to
+    // clean up the reviews once the products themselves are gone.
+    const doomed = await Product.find(filter).select('_id name slug')
+    if (!doomed.length) throw ApiError.badRequest('Nothing matched — nothing was deleted')
+
+    const doomedIds = doomed.map((p) => p._id)
+    const result = await Product.deleteMany({ _id: { $in: doomedIds } })
+    const reviews = await Review.deleteMany({ product: { $in: doomedIds } })
+
+    await logActivity({
+      actor: req.user._id, actorName: req.user.name,
+      action: 'product.bulk-delete',
+      summary: `Permanently deleted ${result.deletedCount} products`
+        + (reviews.deletedCount ? ` and ${reviews.deletedCount} of their reviews` : ''),
+      meta: { names: doomed.slice(0, 20).map((p) => p.name), all: Boolean(all) },
+    })
+
+    res.json({
+      ok: true,
+      deleted: result.deletedCount,
+      reviewsDeleted: reviews.deletedCount,
+      names: doomed.slice(0, 5).map((p) => p.name),
+    })
   }),
 )
 

@@ -24,6 +24,8 @@ export default function Products() {
   const { user } = useAdminAuth()
   const isOwner = user?.role === 'owner'
   const [removing, setRemoving] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [selectAllMatching, setSelectAllMatching] = useState(false)
 
   /**
    * Downloads are authenticated, so they cannot be a plain link — fetch with
@@ -103,6 +105,33 @@ export default function Products() {
     }
   }
 
+  /**
+   * Permanent bulk delete.
+   *
+   * When the admin chose "select all that match", the filter goes to the
+   * server rather than a list of ids — the selection then means every product
+   * matching the search, not the twenty on screen.
+   */
+  const deleteSelected = async () => {
+    setRemoving(true)
+    try {
+      const body = selectAllMatching ? { all: true, category, status, q } : { ids: selected }
+      const res = await adminApi.post('/products/bulk-delete', body)
+      push(
+        `${res.deleted} product${res.deleted === 1 ? '' : 's'} deleted permanently` +
+          (res.reviewsDeleted ? ` · ${res.reviewsDeleted} reviews removed` : ''),
+      )
+      setDeleteOpen(false)
+      setSelected([])
+      setSelectAllMatching(false)
+      load()
+    } catch (err) {
+      push(err.message, 'error')
+    } finally {
+      setRemoving(false)
+    }
+  }
+
   const duplicate = async (product) => {
     try {
       await adminApi.post(`/products/${product._id}/duplicate`)
@@ -167,7 +196,23 @@ export default function Products() {
 
         {selected.length > 0 && (
           <div className="flex flex-wrap items-center gap-2 border-y border-ink/8 bg-blush/60 px-5 py-3">
-            <span className="text-[0.8125rem] font-medium">{selected.length} selected</span>
+            <span className="text-[0.8125rem] font-medium">
+              {selectAllMatching
+                ? `All ${data.meta.total} products selected`
+                : `${selected.length} selected`}
+            </span>
+            {/* The header checkbox can only reach the page you are looking at.
+                When a filter matches more than that, offer the rest explicitly
+                rather than letting "select all" quietly mean "select 24". */}
+            {allSelected && !selectAllMatching && data.meta.total > selected.length && (
+              <button
+                type="button"
+                onClick={() => setSelectAllMatching(true)}
+                className="text-[0.75rem] font-medium text-plum underline"
+              >
+                Select all {data.meta.total} that match
+              </button>
+            )}
             <Btn size="xs" onClick={() => bulk('status', 'active')}>Publish</Btn>
             <Btn size="xs" onClick={() => bulk('status', 'draft')}>Move to draft</Btn>
             <Btn size="xs" onClick={() => bulk('featured', true)}>Feature</Btn>
@@ -182,7 +227,19 @@ export default function Products() {
               Adjust stock
             </Btn>
             <Btn size="xs" variant="danger" onClick={() => bulk('status', 'archived')}>Archive</Btn>
-            <button type="button" onClick={() => setSelected([])} className="ml-auto text-[0.75rem] text-ink/50 underline">
+            {/* Owner-only, and kept visually apart from Archive: one is a
+                reversible status change, the other empties the row out of the
+                database. */}
+            {isOwner && (
+              <Btn size="xs" variant="danger" onClick={() => setDeleteOpen(true)}>
+                <Icon name="trash" size={12} /> Delete permanently
+              </Btn>
+            )}
+            <button
+              type="button"
+              onClick={() => { setSelected([]); setSelectAllMatching(false) }}
+              className="ml-auto text-[0.75rem] text-ink/50 underline"
+            >
               Clear
             </button>
           </div>
@@ -205,7 +262,10 @@ export default function Products() {
                   label: (
                     <Checkbox
                       checked={allSelected}
-                      onChange={(v) => setSelected(v ? data.products.map((p) => p._id) : [])}
+                      onChange={(v) => {
+                        setSelectAllMatching(false)
+                        setSelected(v ? data.products.map((p) => p._id) : [])
+                      }}
                     />
                   ),
                   width: '2.5rem',
@@ -221,7 +281,10 @@ export default function Products() {
                     <Td>
                       <Checkbox
                         checked={selected.includes(p._id)}
-                        onChange={(v) => setSelected((s) => (v ? [...s, p._id] : s.filter((x) => x !== p._id)))}
+                        onChange={(v) => {
+                          setSelectAllMatching(false)
+                          setSelected((s) => (v ? [...s, p._id] : s.filter((x) => x !== p._id)))
+                        }}
                       />
                     </Td>
                     <Td>
@@ -293,6 +356,43 @@ export default function Products() {
       {/* Archiving and deleting are genuinely different outcomes, so the
           dialog offers both rather than hiding one behind a trash icon that
           silently archives and leaves the row sitting in the list. */}
+      <Modal
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        title={
+          selectAllMatching
+            ? `Delete all ${data?.meta.total ?? 0} matching products?`
+            : `Delete ${selected.length} product${selected.length === 1 ? '' : 's'}?`
+        }
+        size="sm"
+        footer={
+          <div className="flex w-full flex-wrap justify-end gap-2">
+            <Btn variant="ghost" onClick={() => setDeleteOpen(false)} disabled={removing}>
+              Cancel
+            </Btn>
+            <Btn variant="danger" onClick={deleteSelected} loading={removing}>
+              Delete permanently
+            </Btn>
+          </div>
+        }
+      >
+        <div className="space-y-3 text-[0.875rem] leading-relaxed text-ink/70">
+          <p className="rounded-xl bg-red-50 px-3.5 py-3 text-red-700">
+            This removes {selectAllMatching ? 'every product matching the current filter' : 'them'}{' '}
+            from the database for good. There is no undo — use Archive if you might want them back.
+          </p>
+          <p>
+            Past orders and invoices are unaffected: each order line keeps its own copy of the name,
+            price, SKU and image as they were at the time of purchase.
+          </p>
+          <p>
+            Any reviews written about {selectAllMatching ? 'these products' : 'them'} are deleted
+            too, since a review of a product that no longer exists cannot be read and would keep
+            counting towards your ratings.
+          </p>
+        </div>
+      </Modal>
+
       <Modal
         open={Boolean(confirm)}
         onClose={() => setConfirm(null)}
