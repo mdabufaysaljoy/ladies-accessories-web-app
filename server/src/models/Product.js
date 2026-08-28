@@ -96,11 +96,26 @@ productSchema.virtual('discountPercent').get(function () {
 })
 
 productSchema.pre('validate', async function (next) {
-  if (!this.slug && this.name) {
-    let base = slugify(this.name)
+  if (!this.slug && this.name) this.slug = slugify(this.name)
+
+  /**
+   * Resolve slug collisions by appending -2, -3, …
+   *
+   * This runs whenever the slug is being set for the first time or changed —
+   * not only when it arrives empty. The admin form derives the slug from the
+   * product name and sends it, so the "only if absent" version never ran for
+   * anything created there: two products with the same name both arrived with
+   * the same slug and the second was rejected by the unique index with
+   * "That slug is already in use".
+   *
+   * Renaming an existing product leaves its slug alone. A live URL that
+   * silently changes underneath a customer's bookmark, a shared link or a
+   * search result is worse than a slug that no longer matches the title.
+   */
+  if (this.slug && (this.isNew || this.isModified('slug'))) {
+    const base = slugify(this.slug) || slugify(this.name) || 'product'
     let candidate = base
     let n = 2
-    // Slugs are public URLs, so collisions must be resolved rather than thrown.
     while (await mongoose.models.Product.exists({ slug: candidate, _id: { $ne: this._id } })) {
       candidate = `${base}-${n++}`
     }

@@ -166,6 +166,15 @@ export default function ProductEdit() {
           details: form.details.filter(Boolean),
           specifications: form.specifications.filter((s) => s.label || s.value),
         }
+
+        /**
+         * A new product does not send a slug at all — the field is generated,
+         * not edited, so the server owns it end to end and is the only place
+         * that can safely resolve a collision. Sending the locally-derived one
+         * was what produced "That slug is already in use" for a second product
+         * with the same name.
+         */
+        if (isNew) delete payload.slug
         if (isNew) {
           const { product } = await adminApi.post('/products', payload)
           push('Product created')
